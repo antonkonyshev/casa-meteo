@@ -20,8 +20,8 @@
 // history length of 288 (user requests aren't considered),
 // it'll consume 9216 bytes of memory, may be increased
 // significantly in case more details are needed.
-#define MEASUREMENT_PERIOD 60  // seconds; in order to have last 24 hours, use 5m period and history length of 288, it'll require 
-#define HISTORY_LENGTH 60  // measurements
+#define MEASUREMENT_PERIOD 60  // seconds
+#define HISTORY_LENGTH 50  // 300  // measurements
 #define SERIALIZED_MEASUREMENT_MAX_LENGTH 256  // near 200 length de facto
 
 static const char* wifi_ssid = "AKTpLAp";
@@ -90,8 +90,15 @@ void performPeriodicalMeasurement() {
   perform_periodical_measurement = true;
 }
 
-void getServiceIdResponse() {
-  server.send(200, "plain/text", "meteo");
+void getServiceInfoResponse() {
+  digitalWrite(LED_PIN, HIGH);
+  StaticJsonDocument<128> json_document;
+  char buffer[128] = { '\0' };
+  json_document["service"] = "meteo";
+  json_document["name"] = "Room";
+  serializeJson(json_document, buffer);
+  server.send(200, "application/json", buffer);
+  digitalWrite(LED_PIN, LOW);
 }
 
 void getMeteoResponse() {
@@ -134,7 +141,7 @@ void getHistoryResponse() {
 
 void setupRouting() {
   server.on("/", getMeteoResponse);
-  server.on("/service", getServiceIdResponse);
+  server.on("/service", getServiceInfoResponse);
   server.on("/history", getHistoryResponse);
   server.begin();
 }
