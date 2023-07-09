@@ -14,13 +14,14 @@
 #define BMP280_SCL 22
 #define BMP280_I2C_ADDRESS 0x76
 #define MMHG_IN_PA 0.007500616827041699
+#define MQ7_AO 34
 #define API_PORT 80
 
 // In order to have last 24 hours use 5 minutes period and
 // history length of 288 (user requests aren't considered),
 // it'll consume 9216 bytes of memory, may be increased
 // significantly in case more details are needed.
-#define MEASUREMENT_PERIOD 60  // seconds
+#define MEASUREMENT_PERIOD 5  // seconds
 #define HISTORY_LENGTH 50  // 300  // measurements
 #define SERIALIZED_MEASUREMENT_MAX_LENGTH 256  // near 200 length de facto
 
@@ -39,6 +40,7 @@ typedef struct measurement_s {
   float temperature;  // °C
   float pressure;  // mmHg
   float altitude;  // meters above sea level
+  int pollution;  // ppm
 } measurement_t;
 
 measurement_t* history[HISTORY_LENGTH];
@@ -59,7 +61,22 @@ measurement_t* loadSensorData() {
   Serial.print(" mmHg   |   Altitude: ");
   measurement->altitude = round(bmp280.readAltitude() * 100) / 100;
   Serial.print(measurement->altitude);
-  Serial.println(" m");
+  Serial.print(" m   |   CO: ");
+
+  float mq7Voltage = 5.0;
+  int coRaw = analogRead(MQ7_AO);  // Value from 0 to 4095
+  Serial.print(coRaw);
+  Serial.print(" [");
+  double RvRo = coRaw * (mq7Voltage / 4095);
+  Serial.print(RvRo);
+  Serial.print("|");
+  int coPpm = 3.027 * exp(1.0698 * RvRo);
+  Serial.print(coPpm);
+  Serial.print(" ppm|");
+  double mgm3 = coPpm * (28.06 / 24.45);
+  Serial.print(mgm3);
+  Serial.println(" mgm3]");
+
   if (history_index < HISTORY_LENGTH - 1) {
     history_index += 1;
   } else {
@@ -170,6 +187,10 @@ void setup() {
   } else {
     Serial.println(" [ Fail ]");
   }
+
+  Serial.print("Initializing MQ-7 ...");
+  pinMode(MQ7_AO, INPUT);
+  Serial.println(" [ Done ]");
 
   Serial.print("Connecting to WiFi network ...");
   WiFi.mode(WIFI_MODE_STA);
