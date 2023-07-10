@@ -29,6 +29,19 @@
 
 #define API_PORT 80
 
+#define THERMOMETER_MAX_TEMPERATURE 34  // thermometer max temperature in C, default: 22
+#define THERMOMETER_MIN_TEMPERATURE 24  // thermometer min temperature in C, default: 12
+#define THERMOMETER_MAX_LENGTH 142  // thermometer mercury length in pixels
+#define THERMOMETER_BORDER 3   // border around mercury of the thermometer
+#define THERMOMETER_WIDTH 9  // thermometer mercury width
+#define THERMOMETER_X 9  // thermometer mercury x coordinate
+#define THERMOMETER_Y 8  // thermometer mercury y coordinate
+#define THERMOMETER_RADIUS 7  // radius of mercury ball of the thermometer in pixels
+#define THERMOMETER_SCALE_UNIT_WIDTH 2  // in pixels
+#define THERMOMETER_STEP (THERMOMETER_MAX_LENGTH / (THERMOMETER_MAX_TEMPERATURE - THERMOMETER_MIN_TEMPERATURE))  // per 1C
+#define THERMOMETER_SCALE_UNIT_X round(THERMOMETER_X + THERMOMETER_WIDTH / 2) + 1
+#define THERMOMETER_SCALE_UNIT_LENGTH round(THERMOMETER_WIDTH / 2)
+
 #define COLOR_BLUE TFT_RED
 #define COLOR_RED TFT_BLUE
 #define COLOR_WHITE TFT_WHITE
@@ -53,6 +66,7 @@ time_t now = 0;
 hw_timer_t* measurement_timer = NULL;
 bool perform_periodical_measurement = false;
 uint8_t history_index = -1;
+bool thermometerInitialized = false;
 
 typedef struct measurement_s {
   uint32_t timestamp;  // UTC timezone
@@ -63,6 +77,37 @@ typedef struct measurement_s {
 } measurement_t;
 
 measurement_t* history[HISTORY_LENGTH];
+
+void initThermometer() {
+  tft.fillSmoothRoundRect(THERMOMETER_X - THERMOMETER_BORDER, THERMOMETER_Y - THERMOMETER_BORDER, THERMOMETER_WIDTH + 2 * THERMOMETER_BORDER, THERMOMETER_MAX_LENGTH + 2 * THERMOMETER_BORDER, round(THERMOMETER_WIDTH + 2 * THERMOMETER_BORDER) + 1, COLOR_WHITE, COLOR_WHITE);
+  tft.fillSmoothCircle(13, 144, THERMOMETER_RADIUS + THERMOMETER_BORDER, COLOR_WHITE, COLOR_WHITE);
+  tft.fillSmoothCircle(13, 144, THERMOMETER_RADIUS, COLOR_RED, COLOR_RED);
+  tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, COLOR_BLACK, COLOR_BLACK);
+}
+
+void drawThermometer(float value) {
+  if (!thermometerInitialized) {
+    initThermometer();
+    thermometerInitialized = true;
+  }
+  uint8_t mercuryValue;
+  if (value <= THERMOMETER_MIN_TEMPERATURE) {
+    mercuryValue = THERMOMETER_STEP;
+  } else if (value >= THERMOMETER_MAX_TEMPERATURE) {
+    mercuryValue = THERMOMETER_MAX_LENGTH;
+  } else {
+    mercuryValue = round((value - THERMOMETER_MIN_TEMPERATURE) * THERMOMETER_STEP);
+  }
+  tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, COLOR_BLACK, COLOR_BLACK);
+  tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y + THERMOMETER_MAX_LENGTH - mercuryValue, THERMOMETER_WIDTH, mercuryValue, THERMOMETER_WIDTH, COLOR_RED, COLOR_RED);
+
+  for (uint8_t idx = 0; idx < THERMOMETER_MAX_TEMPERATURE - THERMOMETER_MIN_TEMPERATURE - 1; idx++) {
+    if (!idx) {
+      continue;
+    }
+    tft.fillRect(THERMOMETER_SCALE_UNIT_X, round(THERMOMETER_Y + idx * THERMOMETER_STEP), THERMOMETER_SCALE_UNIT_LENGTH, THERMOMETER_SCALE_UNIT_WIDTH, COLOR_WHITE);
+  }
+}
 
 measurement_t* loadSensorData() {
   measurement_t* measurement;
@@ -77,6 +122,7 @@ measurement_t* loadSensorData() {
   char buff[16] = {0};
   snprintf(buff, 16, "%.1f", measurement->temperature);
   tft.drawRightString(buff, 123, 5, 6);
+  drawThermometer(measurement->temperature);
   Serial.print(" °C   |   Pressure: ");
   measurement->pressure = round(bmp280.readPressure() * MMHG_IN_PA * 100) / 100;
   Serial.print(measurement->pressure);
@@ -185,13 +231,6 @@ void setupRouting() {
   server.begin();
 }
 
-void drawThermometer(float value) {
-  tft.fillSmoothRoundRect(6, 5, 15, 148, 10, COLOR_WHITE, COLOR_WHITE);
-  tft.fillSmoothCircle(13, 144, 10, COLOR_WHITE, COLOR_WHITE);
-  tft.fillSmoothCircle(13, 144, 7, COLOR_RED, COLOR_RED);
-  tft.fillSmoothRoundRect(9, 8, 9, 142, 5, COLOR_RED, COLOR_RED);
-}
-
 void setup() {
   Serial.begin(9600);
   Serial.println("");
@@ -214,7 +253,6 @@ void setup() {
   tft.init();
   tft.fillScreen(COLOR_BLACK);
   tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
-  drawThermometer(20.0);
   Serial.println(" [ Done ]");
 
   Serial.print("Initializing BMP280 ...");
