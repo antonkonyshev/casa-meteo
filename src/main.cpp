@@ -19,6 +19,7 @@
 #define MMHG_IN_PA 0.007500616827041699
 
 #define MQ7_AO 34
+#define MQ7_VOLTAGE 3.3
 
 #define TFT_SCK 18
 #define TFT_SDA 23
@@ -29,8 +30,8 @@
 
 #define API_PORT 80
 
-#define THERMOMETER_MAX_TEMPERATURE 34  // thermometer max temperature in C, default: 22
-#define THERMOMETER_MIN_TEMPERATURE 24  // thermometer min temperature in C, default: 12
+#define THERMOMETER_MAX_TEMPERATURE 33  // thermometer max temperature in C, default: 22
+#define THERMOMETER_MIN_TEMPERATURE 23  // thermometer min temperature in C, default: 12
 #define THERMOMETER_MAX_LENGTH 142  // thermometer mercury length in pixels
 #define THERMOMETER_BORDER 3   // border around mercury of the thermometer
 #define THERMOMETER_WIDTH 9  // thermometer mercury width
@@ -58,6 +59,16 @@
 static const char* wifi_ssid = "AKTpLAp";
 static const char* wifi_password = "JXfRV9QRD7EaFW6UAPNPoG2BdXB2LcpETSsJmpmX7R9gr5Xn6qoyq2bpLKCn7A4";
 
+// TODO: Split logic to separate modules
+// TODO: Current time on the display
+// TODO: Pollution on the display
+// TODO: Pressure on the display
+// TODO: Pollution in the API responses
+// TODO: Wifi ssid and password configuration via bluetooth
+// TODO: Use average value for pollution
+// TODO: Periodical time sync via NTP
+// TODO: Measure offten, but write to history only every hour
+
 TFT_eSPI tft = TFT_eSPI();
 
 Adafruit_BMP280 bmp280;
@@ -73,7 +84,7 @@ typedef struct measurement_s {
   float temperature;  // °C
   float pressure;  // mmHg
   float altitude;  // meters above sea level
-  int pollution;  // ppm
+  float pollution;  // mg/m3
 } measurement_t;
 
 measurement_t* history[HISTORY_LENGTH];
@@ -85,9 +96,28 @@ void initThermometer() {
   tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, COLOR_BLACK, COLOR_BLACK);
 }
 
+void drawPollutionUnits() {
+  tft.drawRightString("M", 118, 136, 1);
+  tft.drawLine(119, 136, 122, 136, COLOR_WHITE);
+  tft.drawLine(119, 136, 119, 142, COLOR_WHITE);
+
+  tft.drawLine(110, 144, 124, 144, COLOR_WHITE);
+
+  tft.drawRightString("M", 118, 147, 1);
+  tft.drawRightString("3", 125, 146, 1);
+}
+
+void drawTemperatureUnits() {
+  tft.fillCircle(115, 17, 3, COLOR_WHITE);
+  tft.fillCircle(115, 17, 2, COLOR_BLACK);
+  tft.drawRightString("C", 126, 18, 2);
+}
+
 void drawThermometer(float value) {
   if (!thermometerInitialized) {
     initThermometer();
+    drawPollutionUnits();
+    drawTemperatureUnits();
     thermometerInitialized = true;
   }
   uint8_t mercuryValue;
@@ -109,6 +139,58 @@ void drawThermometer(float value) {
   }
 }
 
+float convertPollutionToMgM3(int value) {
+  return (3.027 * exp(1.0698 * (value * (MQ7_VOLTAGE / 4095)))) * (28.06 / 24.45);
+  /*
+  float mq7Voltage = 3.3;
+  int coRaw = analogRead(MQ7_AO);  // Value from 0 to 4095
+  Serial.print(coRaw);
+  Serial.print(" [");
+  double RvRo = coRaw * (MQ7_VOLTAGE / 4095);
+  Serial.print(RvRo);
+  Serial.print("|");
+  int coPpm = 3.027 * exp(1.0698 * RvRo);
+  Serial.print(coPpm);
+  Serial.print(" ppm|");
+  double mgm3 = coPpm * (28.06 / 24.45);
+  Serial.print(mgm3);
+  Serial.println(" mgm3]");
+  */
+}
+
+void drawTemperature(float value) {
+  tft.fillRect(24, 3, 88, 40, COLOR_BLACK);
+  int8_t integerPart = (int8_t)value;
+  uint8_t decimalPart = (uint8_t)round((abs(value) - abs(integerPart)) * 10);
+  char buff[5] = {0};
+
+  snprintf(buff, 4, "%d.", integerPart);
+  tft.drawRightString(buff, 96, 5, 6);
+
+  snprintf(buff, 2, "%d", decimalPart);
+  tft.drawRightString(buff, 110, 22, 4);
+}
+
+void drawPollution(float value) {
+  tft.fillRect(26, 135, 82, 21, COLOR_BLACK);
+
+  if (value >= 0 && value < 10000) {
+    uint16_t integerPart = (uint16_t)value;
+    uint8_t decimalPart = (uint8_t)round((value - integerPart) * 100);
+    char buff[6] = {0};
+
+    snprintf(buff, 3, "%d", decimalPart);
+    tft.drawRightString(buff, 108, 141, 2);
+
+    snprintf(buff, 6, "%d.", integerPart);
+    tft.drawRightString(buff, 91, 135, 4);
+  } else {
+    char buff[7] = {0};
+    snprintf(buff, 7, "%.0f", value);
+    tft.drawRightString(buff, 107, 135, 4);
+  }
+}
+
 measurement_t* loadSensorData() {
   measurement_t* measurement;
   measurement = (measurement_t*) malloc(sizeof(measurement_t));
@@ -119,9 +201,7 @@ measurement_t* loadSensorData() {
   measurement->temperature = round(bmp280.readTemperature() * 100) / 100;
   Serial.print("   |   Temperature: ");
   Serial.print(measurement->temperature);
-  char buff[16] = {0};
-  snprintf(buff, 16, "%.1f", measurement->temperature);
-  tft.drawRightString(buff, 123, 5, 6);
+  drawTemperature(measurement->temperature);
   drawThermometer(measurement->temperature);
   Serial.print(" °C   |   Pressure: ");
   measurement->pressure = round(bmp280.readPressure() * MMHG_IN_PA * 100) / 100;
@@ -129,21 +209,12 @@ measurement_t* loadSensorData() {
   Serial.print(" mmHg   |   Altitude: ");
   measurement->altitude = round(bmp280.readAltitude() * 100) / 100;
   Serial.print(measurement->altitude);
-  Serial.print(" m   |   CO: ");
+  Serial.print(" m   |   Pollution: ");
 
-  float mq7Voltage = 5.0;
-  int coRaw = analogRead(MQ7_AO);  // Value from 0 to 4095
-  Serial.print(coRaw);
-  Serial.print(" [");
-  double RvRo = coRaw * (mq7Voltage / 4095);
-  Serial.print(RvRo);
-  Serial.print("|");
-  int coPpm = 3.027 * exp(1.0698 * RvRo);
-  Serial.print(coPpm);
-  Serial.print(" ppm|");
-  double mgm3 = coPpm * (28.06 / 24.45);
-  Serial.print(mgm3);
-  Serial.println(" mgm3]");
+  measurement->pollution = round(convertPollutionToMgM3(analogRead(MQ7_AO)) * 100) / 100;
+  Serial.print(measurement->pollution);
+  Serial.println(" mgm3");
+  drawPollution(measurement->pollution);
 
   if (history_index < HISTORY_LENGTH - 1) {
     history_index += 1;
@@ -255,14 +326,14 @@ void setup() {
   tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
   Serial.println(" [ Done ]");
 
-  Serial.print("Initializing BMP280 ...");
+  Serial.print("Initializing BMP280 sensor ...");
   if (bmp280.begin(BMP280_I2C_ADDRESS)) {
     Serial.println(" [ Done ]");
   } else {
     Serial.println(" [ Fail ]");
   }
 
-  Serial.print("Initializing MQ-7 ...");
+  Serial.print("Initializing MQ-7 sensor ...");
   pinMode(MQ7_AO, INPUT);
   Serial.println(" [ Done ]");
 
