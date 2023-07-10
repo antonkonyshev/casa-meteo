@@ -5,17 +5,34 @@
 #include <WebServer.h>
 #include <time.h>
 #include <Adafruit_BMP280.h>
+#include <TFT_eSPI.h>
+#include <SPI.h>
 
 #define ARDUINOJSON_USE_DOUBLE 0
 #include <ArduinoJson.h>
 
 #define LED_PIN 2
+
 #define BMP280_SDA 21
 #define BMP280_SCL 22
 #define BMP280_I2C_ADDRESS 0x76
 #define MMHG_IN_PA 0.007500616827041699
+
 #define MQ7_AO 34
+
+#define TFT_SCK 18
+#define TFT_SDA 23
+#define TFT_RST -1
+#define TFT_DC 2
+#define TFT_CS 5
+// #define TFT_LEDA 15
+
 #define API_PORT 80
+
+#define COLOR_BLUE TFT_RED
+#define COLOR_RED TFT_BLUE
+#define COLOR_WHITE TFT_WHITE
+#define COLOR_BLACK TFT_BLACK
 
 // In order to have last 24 hours use 5 minutes period and
 // history length of 288 (user requests aren't considered),
@@ -27,6 +44,8 @@
 
 static const char* wifi_ssid = "AKTpLAp";
 static const char* wifi_password = "JXfRV9QRD7EaFW6UAPNPoG2BdXB2LcpETSsJmpmX7R9gr5Xn6qoyq2bpLKCn7A4";
+
+TFT_eSPI tft = TFT_eSPI();
 
 Adafruit_BMP280 bmp280;
 WebServer server(API_PORT);
@@ -55,6 +74,9 @@ measurement_t* loadSensorData() {
   measurement->temperature = round(bmp280.readTemperature() * 100) / 100;
   Serial.print("   |   Temperature: ");
   Serial.print(measurement->temperature);
+  char buff[16] = {0};
+  snprintf(buff, 16, "%.1f", measurement->temperature);
+  tft.drawRightString(buff, 123, 5, 6);
   Serial.print(" °C   |   Pressure: ");
   measurement->pressure = round(bmp280.readPressure() * MMHG_IN_PA * 100) / 100;
   Serial.print(measurement->pressure);
@@ -163,6 +185,13 @@ void setupRouting() {
   server.begin();
 }
 
+void drawThermometer(float value) {
+  tft.fillSmoothRoundRect(6, 5, 15, 148, 10, COLOR_WHITE, COLOR_WHITE);
+  tft.fillSmoothCircle(13, 144, 10, COLOR_WHITE, COLOR_WHITE);
+  tft.fillSmoothCircle(13, 144, 7, COLOR_RED, COLOR_RED);
+  tft.fillSmoothRoundRect(9, 8, 9, 142, 5, COLOR_RED, COLOR_RED);
+}
+
 void setup() {
   Serial.begin(9600);
   Serial.println("");
@@ -180,6 +209,13 @@ void setup() {
   } else {
     Serial.print(" [ Fail ]");
   }
+
+  Serial.print("Initializing TFT display ...");
+  tft.init();
+  tft.fillScreen(COLOR_BLACK);
+  tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
+  drawThermometer(20.0);
+  Serial.println(" [ Done ]");
 
   Serial.print("Initializing BMP280 ...");
   if (bmp280.begin(BMP280_I2C_ADDRESS)) {
