@@ -1,389 +1,113 @@
-#define CONFIG_ESP_INT_WDT_TIMEOUT_MS 5000  // milliseconds
+#include "main.h"
+#include "pinout.h"
+#include "network.h"
+#include "display.h"
 
-#include <Arduino.h>
-#include <WiFi.h>
-#include <WebServer.h>
-#include <time.h>
-#include <Adafruit_BMP280.h>
-#include <TFT_eSPI.h>
-#include <SPI.h>
-
-#define ARDUINOJSON_USE_DOUBLE 0
-#include <ArduinoJson.h>
-
-#define LED_PIN 2
-
-#define BMP280_SDA 21
-#define BMP280_SCL 22
-#define BMP280_I2C_ADDRESS 0x76
-#define MMHG_IN_PA 0.007500616827041699
-
-#define MQ7_AO 34
-#define MQ7_VOLTAGE 3.3
-
-#define TFT_SCK 18
-#define TFT_SDA 23
-#define TFT_RST -1
-#define TFT_DC 2
-#define TFT_CS 5
-// #define TFT_LEDA 15
-
-#define API_PORT 80
-
-#define THERMOMETER_MAX_TEMPERATURE 33  // thermometer max temperature in C, default: 22
-#define THERMOMETER_MIN_TEMPERATURE 23  // thermometer min temperature in C, default: 12
-#define THERMOMETER_MAX_LENGTH 142  // thermometer mercury length in pixels
-#define THERMOMETER_BORDER 3   // border around mercury of the thermometer
-#define THERMOMETER_WIDTH 9  // thermometer mercury width
-#define THERMOMETER_X 9  // thermometer mercury x coordinate
-#define THERMOMETER_Y 8  // thermometer mercury y coordinate
-#define THERMOMETER_RADIUS 7  // radius of mercury ball of the thermometer in pixels
-#define THERMOMETER_SCALE_UNIT_WIDTH 2  // in pixels
-#define THERMOMETER_STEP (THERMOMETER_MAX_LENGTH / (THERMOMETER_MAX_TEMPERATURE - THERMOMETER_MIN_TEMPERATURE))  // per 1C
-#define THERMOMETER_SCALE_UNIT_X round(THERMOMETER_X + THERMOMETER_WIDTH / 2) + 1
-#define THERMOMETER_SCALE_UNIT_LENGTH round(THERMOMETER_WIDTH / 2)
-
-#define COLOR_BLUE TFT_RED
-#define COLOR_RED TFT_BLUE
-#define COLOR_WHITE TFT_WHITE
-#define COLOR_BLACK TFT_BLACK
-
-// In order to have last 24 hours use 5 minutes period and
-// history length of 288 (user requests aren't considered),
-// it'll consume 9216 bytes of memory, may be increased
-// significantly in case more details are needed.
-#define MEASUREMENT_PERIOD 5  // seconds
-#define HISTORY_LENGTH 50  // 300  // measurements
-#define SERIALIZED_MEASUREMENT_MAX_LENGTH 256  // near 200 length de facto
-
-static const char* wifi_ssid = "AKTpLAp";
-static const char* wifi_password = "JXfRV9QRD7EaFW6UAPNPoG2BdXB2LcpETSsJmpmX7R9gr5Xn6qoyq2bpLKCn7A4";
-
-// TODO: Split logic to separate modules
 // TODO: Current time on the display
-// TODO: Pollution on the display
+// TODO: Pollution indicator on the display
 // TODO: Pressure on the display
-// TODO: Pollution in the API responses
 // TODO: Wifi ssid and password configuration via bluetooth
 // TODO: Use average value for pollution
 // TODO: Periodical time sync via NTP
 // TODO: Measure offten, but write to history only every hour
 
-TFT_eSPI tft = TFT_eSPI();
-
-Adafruit_BMP280 bmp280;
-WebServer server(API_PORT);
-time_t now = 0;
 hw_timer_t* measurement_timer = NULL;
 bool perform_periodical_measurement = false;
-uint8_t history_index = -1;
-bool thermometerInitialized = false;
-
-typedef struct measurement_s {
-  uint32_t timestamp;  // UTC timezone
-  float temperature;  // °C
-  float pressure;  // mmHg
-  float altitude;  // meters above sea level
-  float pollution;  // mg/m3
-} measurement_t;
-
-measurement_t* history[HISTORY_LENGTH];
-
-void initThermometer() {
-  tft.fillSmoothRoundRect(THERMOMETER_X - THERMOMETER_BORDER, THERMOMETER_Y - THERMOMETER_BORDER, THERMOMETER_WIDTH + 2 * THERMOMETER_BORDER, THERMOMETER_MAX_LENGTH + 2 * THERMOMETER_BORDER, round(THERMOMETER_WIDTH + 2 * THERMOMETER_BORDER) + 1, COLOR_WHITE, COLOR_WHITE);
-  tft.fillSmoothCircle(13, 144, THERMOMETER_RADIUS + THERMOMETER_BORDER, COLOR_WHITE, COLOR_WHITE);
-  tft.fillSmoothCircle(13, 144, THERMOMETER_RADIUS, COLOR_RED, COLOR_RED);
-  tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, COLOR_BLACK, COLOR_BLACK);
-}
-
-void drawPollutionUnits() {
-  tft.drawRightString("M", 118, 136, 1);
-  tft.drawLine(119, 136, 122, 136, COLOR_WHITE);
-  tft.drawLine(119, 136, 119, 142, COLOR_WHITE);
-
-  tft.drawLine(110, 144, 124, 144, COLOR_WHITE);
-
-  tft.drawRightString("M", 118, 147, 1);
-  tft.drawRightString("3", 125, 146, 1);
-}
-
-void drawTemperatureUnits() {
-  tft.fillCircle(115, 17, 3, COLOR_WHITE);
-  tft.fillCircle(115, 17, 2, COLOR_BLACK);
-  tft.drawRightString("C", 126, 18, 2);
-}
-
-void drawThermometer(float value) {
-  if (!thermometerInitialized) {
-    initThermometer();
-    drawPollutionUnits();
-    drawTemperatureUnits();
-    thermometerInitialized = true;
-  }
-  uint8_t mercuryValue;
-  if (value <= THERMOMETER_MIN_TEMPERATURE) {
-    mercuryValue = THERMOMETER_STEP;
-  } else if (value >= THERMOMETER_MAX_TEMPERATURE) {
-    mercuryValue = THERMOMETER_MAX_LENGTH;
-  } else {
-    mercuryValue = round((value - THERMOMETER_MIN_TEMPERATURE) * THERMOMETER_STEP);
-  }
-  tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, COLOR_BLACK, COLOR_BLACK);
-  tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y + THERMOMETER_MAX_LENGTH - mercuryValue, THERMOMETER_WIDTH, mercuryValue, THERMOMETER_WIDTH, COLOR_RED, COLOR_RED);
-
-  for (uint8_t idx = 0; idx < THERMOMETER_MAX_TEMPERATURE - THERMOMETER_MIN_TEMPERATURE - 1; idx++) {
-    if (!idx) {
-      continue;
-    }
-    tft.fillRect(THERMOMETER_SCALE_UNIT_X, round(THERMOMETER_Y + idx * THERMOMETER_STEP), THERMOMETER_SCALE_UNIT_LENGTH, THERMOMETER_SCALE_UNIT_WIDTH, COLOR_WHITE);
-  }
-}
-
-float convertPollutionToMgM3(int value) {
-  return (3.027 * exp(1.0698 * (value * (MQ7_VOLTAGE / 4095)))) * (28.06 / 24.45);
-  /*
-  float mq7Voltage = 3.3;
-  int coRaw = analogRead(MQ7_AO);  // Value from 0 to 4095
-  Serial.print(coRaw);
-  Serial.print(" [");
-  double RvRo = coRaw * (MQ7_VOLTAGE / 4095);
-  Serial.print(RvRo);
-  Serial.print("|");
-  int coPpm = 3.027 * exp(1.0698 * RvRo);
-  Serial.print(coPpm);
-  Serial.print(" ppm|");
-  double mgm3 = coPpm * (28.06 / 24.45);
-  Serial.print(mgm3);
-  Serial.println(" mgm3]");
-  */
-}
-
-void drawTemperature(float value) {
-  tft.fillRect(24, 3, 88, 40, COLOR_BLACK);
-  int8_t integerPart = (int8_t)value;
-  uint8_t decimalPart = (uint8_t)round((abs(value) - abs(integerPart)) * 10);
-  char buff[5] = {0};
-
-  snprintf(buff, 4, "%d.", integerPart);
-  tft.drawRightString(buff, 96, 5, 6);
-
-  snprintf(buff, 2, "%d", decimalPart);
-  tft.drawRightString(buff, 110, 22, 4);
-}
-
-void drawPollution(float value) {
-  tft.fillRect(26, 135, 82, 21, COLOR_BLACK);
-
-  if (value >= 0 && value < 10000) {
-    uint16_t integerPart = (uint16_t)value;
-    uint8_t decimalPart = (uint8_t)round((value - integerPart) * 100);
-    char buff[6] = {0};
-
-    snprintf(buff, 3, "%d", decimalPart);
-    tft.drawRightString(buff, 108, 141, 2);
-
-    snprintf(buff, 6, "%d.", integerPart);
-    tft.drawRightString(buff, 91, 135, 4);
-  } else {
-    char buff[7] = {0};
-    snprintf(buff, 7, "%.0f", value);
-    tft.drawRightString(buff, 107, 135, 4);
-  }
-}
-
-measurement_t* loadSensorData() {
-  measurement_t* measurement;
-  measurement = (measurement_t*) malloc(sizeof(measurement_t));
-  time(&now);
-  measurement->timestamp = now;
-  Serial.print("Timestamp: ");
-  Serial.print(measurement->timestamp);
-  measurement->temperature = round(bmp280.readTemperature() * 100) / 100;
-  Serial.print("   |   Temperature: ");
-  Serial.print(measurement->temperature);
-  drawTemperature(measurement->temperature);
-  drawThermometer(measurement->temperature);
-  Serial.print(" °C   |   Pressure: ");
-  measurement->pressure = round(bmp280.readPressure() * MMHG_IN_PA * 100) / 100;
-  Serial.print(measurement->pressure);
-  Serial.print(" mmHg   |   Altitude: ");
-  measurement->altitude = round(bmp280.readAltitude() * 100) / 100;
-  Serial.print(measurement->altitude);
-  Serial.print(" m   |   Pollution: ");
-
-  measurement->pollution = round(convertPollutionToMgM3(analogRead(MQ7_AO)) * 100) / 100;
-  Serial.print(measurement->pollution);
-  Serial.println(" mgm3");
-  drawPollution(measurement->pollution);
-
-  if (history_index < HISTORY_LENGTH - 1) {
-    history_index += 1;
-  } else {
-    history_index = 0;
-  }
-  if (history[history_index] != NULL) {
-    measurement_t* old_measurement = history[history_index];
-    free(old_measurement);
-  }
-  history[history_index] = measurement;
-  return measurement;
-}
-
-void createJson(measurement_t* measurement, JsonObject* json_object) {
-  json_object->operator[]("timestamp") = measurement->timestamp;
-  JsonObject obj = json_object->createNestedObject("temperature");
-  obj["value"] = measurement->temperature;
-  obj["unit"] = "°C";
-  obj = json_object->createNestedObject("pressure");
-  obj["value"] = measurement->pressure;
-  obj["unit"] = "mmHg";
-  obj = json_object->createNestedObject("altitude");
-  obj["value"] = measurement->altitude;
-  obj["unit"] = "m";
-}
 
 void performPeriodicalMeasurement() {
-  perform_periodical_measurement = true;
-}
-
-void getServiceInfoResponse() {
-  digitalWrite(LED_PIN, HIGH);
-  StaticJsonDocument<128> json_document;
-  char buffer[128] = { '\0' };
-  json_document["service"] = "meteo";
-  json_document["name"] = "Room";
-  serializeJson(json_document, buffer);
-  server.send(200, "application/json", buffer);
-  digitalWrite(LED_PIN, LOW);
-}
-
-void getMeteoResponse() {
-  digitalWrite(LED_PIN, HIGH);
-  measurement_t* measurement = loadSensorData();
-  StaticJsonDocument<SERIALIZED_MEASUREMENT_MAX_LENGTH> json_document;
-  JsonObject json_object = json_document.to<JsonObject>();
-  createJson(measurement, &json_object);
-  char buffer[SERIALIZED_MEASUREMENT_MAX_LENGTH];
-  serializeJson(json_document, buffer);
-  server.send(200, "application/json", buffer);
-  digitalWrite(LED_PIN, LOW);
-}
-
-void getHistoryResponse() {
-  digitalWrite(LED_PIN, HIGH);
-  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  server.send(200, "application/json", "[");
-  char buffer[SERIALIZED_MEASUREMENT_MAX_LENGTH] = { '\0' };
-  DynamicJsonDocument json_document(SERIALIZED_MEASUREMENT_MAX_LENGTH * HISTORY_LENGTH);
-  for (uint8_t idx = 0; idx < HISTORY_LENGTH; idx++) {
-    if (history[idx] == NULL) {
-      break;
-    }
-    memset(&buffer[0], 0, sizeof(buffer));
-    StaticJsonDocument<SERIALIZED_MEASUREMENT_MAX_LENGTH> json_document;
-    JsonObject json_object = json_document.to<JsonObject>();
-    createJson(history[idx], &json_object);
-    if (idx > 0) {
-      server.sendContent(",");
-    }
-    serializeJson(json_document, buffer);
-    server.sendContent(buffer);
-  }
-  server.sendContent("]");
-  server.sendContent("");
-  server.client().stop();
-  digitalWrite(LED_PIN, LOW);
-}
-
-void setupRouting() {
-  server.on("/", getMeteoResponse);
-  server.on("/service", getServiceInfoResponse);
-  server.on("/history", getHistoryResponse);
-  server.begin();
+    perform_periodical_measurement = true;
 }
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println("");
-  Serial.println("--------------------------------- Meteo ---------------------------------");
-  delay(2000);
+    Serial.begin(9600);
+    Serial.println("");
+    Serial.println("--------------------------------- Meteo ---------------------------------");
 
-  Serial.print("Initializing LED indication ...");
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, HIGH);
-  Serial.println(" [ Done ]");
-
-  Serial.print("Disabling Bluetooth module ...");
-  if (btStop()) {
+    Serial.print("Initializing LED indication ...");
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, HIGH);
     Serial.println(" [ Done ]");
-  } else {
-    Serial.print(" [ Fail ]");
-  }
 
-  Serial.print("Initializing TFT display ...");
-  tft.init();
-  tft.fillScreen(COLOR_BLACK);
-  tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
-  Serial.println(" [ Done ]");
+    Serial.print("Disabling Bluetooth module ...");
+    if (btStop()) {
+        Serial.println(" [ Done ]");
+    } else {
+        Serial.print(" [ Fail ]");
+    }
 
-  Serial.print("Initializing BMP280 sensor ...");
-  if (bmp280.begin(BMP280_I2C_ADDRESS)) {
+    Serial.print("Initializing TFT display ...");
+    if (setupDisplay()) {
+        Serial.println(" [ Done ]");
+    } else {
+        Serial.println(" [ Fail ]");
+    }
+
+    Serial.print("Initializing BMP280 sensor ...");
+    if (setupBmp280()) {
+        Serial.println(" [ Done ]");
+    } else {
+        Serial.println(" [ Fail ]");
+    }
+
+    Serial.print("Initializing MQ-7 sensor ...");
+    if (setupMq7()) {
+        Serial.println(" [ Done ]");
+    } else {
+        Serial.println(" [ Fail ]");
+    }
+
+    Serial.print("Connecting to WiFi network ...");
+    if (setupWifi()) {
+      Serial.println(" [ Done ]");
+    } else {
+      Serial.println(" [ Fail ]");
+    }
+
+    Serial.print("Setting up the real time clock ...");
+    if (setupRTC()) {
+      Serial.println(" [ Done ]");
+    } else {
+      Serial.println(" [ Fail ]");
+    }
+
+    Serial.print("Starting HTTP API server ...");
+    setupRouting();
     Serial.println(" [ Done ]");
-  } else {
-    Serial.println(" [ Fail ]");
-  }
 
-  Serial.print("Initializing MQ-7 sensor ...");
-  pinMode(MQ7_AO, INPUT);
-  Serial.println(" [ Done ]");
+    Serial.print("Setting up timers ...");
+    measurement_timer = timerBegin(0, 8000, true);
+    timerAttachInterrupt(measurement_timer, &performPeriodicalMeasurement, true);
+    timerAlarmWrite(measurement_timer, MEASUREMENT_PERIOD * 10000, true);
+    timerAlarmEnable(measurement_timer);
+    Serial.println(" [ Done ]");
 
-  Serial.print("Connecting to WiFi network ...");
-  WiFi.mode(WIFI_MODE_STA);
-  WiFi.begin(wifi_ssid, wifi_password);
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(100);
-  }
-  Serial.println(" [ Done ]");
+    Serial.print("Local IP address: ");
+    Serial.println(WiFi.localIP());
 
-  Serial.print("Setting up the real time clock ...");
-  configTime(0, 0, "pool.ntp.org", "time.google.com", "time.cloudflare.com");
-  while (now < 1687100000) {
-    time(&now);
-    Serial.print(".");
-    delay(100);
-  }
-  Serial.println(" [ Done ]");
+    Serial.printf("Total    heap: %8d bytes     |     Free    heap: %8d bytes\n", ESP.getHeapSize(), ESP.getFreeHeap());
+    Serial.printf("Total PSRAM: %8d bytes     |     Free PSRAM: %8d bytes\n", ESP.getPsramSize(), ESP.getFreePsram());
+    Serial.printf("Sketch size: %8d bytes     |     Free space: %8d bytes\n", ESP.getSketchSize(), ESP.getFreeSketchSpace());
 
-  Serial.print("Starting HTTP API server ...");
-  setupRouting();
-  Serial.println(" [ Done ]");
-
-  Serial.print("Setting up timers ...");
-  measurement_timer = timerBegin(0, 8000, true);
-  timerAttachInterrupt(measurement_timer, &performPeriodicalMeasurement, true);
-  timerAlarmWrite(measurement_timer, MEASUREMENT_PERIOD * 10000, true);
-  timerAlarmEnable(measurement_timer);
-  Serial.println(" [ Done ]");
-
-  Serial.print("Local IP address: ");
-  Serial.println(WiFi.localIP());
-
-  Serial.printf("Total  heap: %8d bytes   |   Free  heap: %8d bytes\n", ESP.getHeapSize(), ESP.getFreeHeap());
-  Serial.printf("Total PSRAM: %8d bytes   |   Free PSRAM: %8d bytes\n", ESP.getPsramSize(), ESP.getFreePsram());
-  Serial.printf("Sketch size: %8d bytes   |   Free space: %8d bytes\n", ESP.getSketchSize(), ESP.getFreeSketchSpace());
-
-  Serial.println("");
-  loadSensorData();
-  digitalWrite(LED_PIN, LOW);
+    Serial.println("");
+    loadSensorData();
+    digitalWrite(LED_PIN, LOW);
 }
 
 void loop() {
-  server.handleClient();
-  if (perform_periodical_measurement) {
-    digitalWrite(LED_PIN, HIGH);
-    loadSensorData();
-    perform_periodical_measurement = false;
-    digitalWrite(LED_PIN, LOW);
-  }
+    getServer()->handleClient();
+    if (perform_periodical_measurement) {
+        digitalWrite(LED_PIN, HIGH);
+        measurement_t* measurement = loadSensorData();
+        Serial.print("Temperature: ");
+        Serial.print(measurement->temperature);
+        Serial.print(" °C     |     Pressure: ");
+        Serial.print(measurement->pressure);
+        Serial.print(" mmHg     |     Altitude: ");
+        Serial.print(measurement->altitude);
+        Serial.print(" m     |     Pollution: ");
+        Serial.print(measurement->pollution);
+        Serial.println(" mgm3");
+        perform_periodical_measurement = false;
+        digitalWrite(LED_PIN, LOW);
+    }
 }
