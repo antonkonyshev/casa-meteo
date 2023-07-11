@@ -1,8 +1,10 @@
-//
 #include <TFT_eSPI.h>
 #include <SPI.h>
 
 #include "pinout.h"
+
+// TODO: make HIGH_POLLUTION_VALUE an editable setting controlled from the application.
+#define HIGH_POLLUTION_VALUE 20  // mgm3, warns a user in case if the current pollution value is higher
 
 #define THERMOMETER_MAX_TEMPERATURE 33  // thermometer max temperature in C, default: 22
 #define THERMOMETER_MIN_TEMPERATURE 23  // thermometer min temperature in C, default: 12
@@ -21,11 +23,20 @@
 #define COLOR_RED TFT_BLUE
 #define COLOR_WHITE TFT_WHITE
 #define COLOR_BLACK TFT_BLACK
+#define COLOR_LIGHTGREEN TFT_GREEN
+#define COLOR_GREEN TFT_DARKGREEN
+#define COLOR_YELLOW TFT_CYAN
+#define COLOR_OLIVE TFT_DARKCYAN
+#define COLOR_DARKBLUE TFT_OLIVE
+#define COLOR_DARKGRAY TFT_DARKGREY
+#define COLOR_LIGHTGRAY TFT_LIGHTGREY
+#define COLOR_SILVER TFT_SILVER
+#define COLOR_SANDY TFT_SKYBLUE
 
-void initThermometer();
-void drawPollutionUnits();
-void drawTemperatureUnits();
 void drawThermometer(float);
 void drawTemperature(float);
 void drawPollution(float);
+void drawPressure(float);
+void drawTime();
+void drawTime(time_t*);
 bool setupDisplay();

@@ -71,12 +71,15 @@ measurement_t* loadSensorData() {
 
     time(&now);
     measurement->timestamp = now;
+    drawTime(&now);
 
     measurement->temperature = readTemperature();
     drawTemperature(measurement->temperature);
     drawThermometer(measurement->temperature);
 
     measurement->pressure = readPressure();
+    drawPressure(measurement->pressure);
+
     measurement->altitude = readAltitude();
 
     measurement->pollution = readPollution();
