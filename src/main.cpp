@@ -3,13 +3,10 @@
 #include "network.h"
 #include "display.h"
 
-// TODO: Current time on the display
-// TODO: Pollution indicator on the display
-// TODO: Pressure on the display
 // TODO: Wifi ssid and password configuration via bluetooth
 // TODO: Use average value for pollution
 // TODO: Periodical time sync via NTP
-// TODO: Measure offten, but write to history only every hour
+// TODO: Measure often, but write to history only every hour
 
 hw_timer_t* measurement_timer = NULL;
 bool perform_periodical_measurement = false;
@@ -55,6 +52,8 @@ void setup() {
     } else {
         Serial.println(" [ Fail ]");
     }
+
+    setupHistory();
 
     Serial.print("Connecting to WiFi network ...");
     if (setupWifi()) {

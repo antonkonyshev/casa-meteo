@@ -4,9 +4,6 @@
 
 Adafruit_BMP280 bmp280;
 
-measurement_t* history[HISTORY_LENGTH];
-uint8_t history_index = -1;
-
 float readTemperature() {
     return round(bmp280.readTemperature() * 100) / 100;
 }
@@ -51,19 +48,6 @@ bool setupMq7() {
     return true;
 }
 
-void storeToHistory(measurement_t* measurement) {
-    if (history_index < HISTORY_LENGTH - 1) {
-        history_index += 1;
-    } else {
-        history_index = 0;
-    }
-    if (history[history_index] != NULL) {
-        measurement_t* old_measurement = history[history_index];
-        free(old_measurement);
-    }
-    history[history_index] = measurement;
-}
-
 measurement_t* loadSensorData() {
     time_t now;
     measurement_t* measurement;
@@ -85,10 +69,7 @@ measurement_t* loadSensorData() {
     measurement->pollution = readPollution();
     drawPollution(measurement->pollution);
 
-    storeToHistory(measurement);
+    appendToHistory(measurement);
+    // drawTemperatureChart(history);
     return measurement;
-}
-
-measurement_t* getHistory() {
-    return history[0];
 }

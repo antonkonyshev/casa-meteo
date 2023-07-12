@@ -89,6 +89,11 @@ void drawTemperature(float value) {
     tft.drawRightString(buff, 110, 22, 4);
 }
 
+/*
+void drawTemperatureChart(float* history) {
+}
+*/
+
 void cleanTime() {
     tft.fillRect(58, 90, 67, 22, COLOR_BLACK);
 }

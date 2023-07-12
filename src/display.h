@@ -35,6 +35,7 @@
 
 void drawThermometer(float);
 void drawTemperature(float);
+// void drawTemperatureChart(float*);
 void drawPollution(float);
 void drawPressure(float);
 void drawTime();

@@ -54,22 +54,22 @@ void getHistoryResponse() {
     digitalWrite(LED_PIN, HIGH);
     server.setContentLength(CONTENT_LENGTH_UNKNOWN);
     server.send(200, "application/json", "[");
-    char buffer[SERIALIZED_MEASUREMENT_MAX_LENGTH] = { '\0' };
-    DynamicJsonDocument json_document(SERIALIZED_MEASUREMENT_MAX_LENGTH * HISTORY_LENGTH);
-    measurement_t* history = getHistory();
-    for (uint8_t idx = 0; idx < HISTORY_LENGTH; idx++) {
-        if (&history[idx] == NULL) {
-            break;
+    history_t* history = getHistory();
+    if (history->first) {
+        char buffer[SERIALIZED_MEASUREMENT_MAX_LENGTH] = { '\0' };
+        history_record_t* record = history->first;
+        while (record) {
+            memset(&buffer[0], 0, sizeof(buffer));
+            StaticJsonDocument<SERIALIZED_MEASUREMENT_MAX_LENGTH> json_document;
+            JsonObject json_object = json_document.to<JsonObject>();
+            createJson(record->measurement, &json_object);
+            if (record != history->first) {
+                server.sendContent(",");
+            }
+            serializeJson(json_document, buffer);
+            server.sendContent(buffer);
+            record = record->next;
         }
-        memset(&buffer[0], 0, sizeof(buffer));
-        StaticJsonDocument<SERIALIZED_MEASUREMENT_MAX_LENGTH> json_document;
-        JsonObject json_object = json_document.to<JsonObject>();
-        createJson(&history[idx], &json_object);
-        if (idx > 0) {
-            server.sendContent(",");
-        }
-        serializeJson(json_document, buffer);
-        server.sendContent(buffer);
     }
     server.sendContent("]");
     server.sendContent("");

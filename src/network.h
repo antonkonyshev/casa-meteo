@@ -9,7 +9,7 @@
 
 #define WIFI_CONNECTION_TIMEOUT 60  // seconds
 #define RTC_SYNC_TIMEOUT 180  // seconds
-#define SERIALIZED_MEASUREMENT_MAX_LENGTH 256    // near 200 length de facto
+#define SERIALIZED_MEASUREMENT_MAX_LENGTH 512    // near 245 bytes per measurement
 
 #define NTP_SERVER_1 "pool.ntp.org"
 #define NTP_SERVER_2 "time.google.com"
