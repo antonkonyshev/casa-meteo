@@ -6,44 +6,171 @@ bool thermometerInitialized = false;
 bool pressureIconInitialized = false;
 bool pollutionWarningInitialized = false;
 
-void initThermometer() {
-    tft.fillSmoothRoundRect(THERMOMETER_X - THERMOMETER_BORDER, THERMOMETER_Y - THERMOMETER_BORDER, THERMOMETER_WIDTH + 2 * THERMOMETER_BORDER, THERMOMETER_MAX_LENGTH + 2 * THERMOMETER_BORDER, round(THERMOMETER_WIDTH + 2 * THERMOMETER_BORDER) + 1, COLOR_WHITE, COLOR_WHITE);
-    tft.fillSmoothCircle(13, 144, THERMOMETER_RADIUS + THERMOMETER_BORDER, COLOR_WHITE, COLOR_WHITE);
-    tft.fillSmoothCircle(13, 144, THERMOMETER_RADIUS, COLOR_RED, COLOR_RED);
-    tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, COLOR_BLACK, COLOR_BLACK);
+void drawTemperatureUnits() {
+    tft.fillCircle(TEMPERATURE_POSITION_X - 11, TEMPERATURE_POSITION_Y - 1, 3, FOREGROUND_COLOR);
+    tft.fillCircle(TEMPERATURE_POSITION_X - 11, TEMPERATURE_POSITION_Y - 1, 2, BACKGROUND_COLOR);
+    tft.drawRightString("C", TEMPERATURE_POSITION_X, TEMPERATURE_POSITION_Y, 2);
+}
+
+void cleanTemperature() {
+    tft.fillRect(TEMPERATURE_POSITION_X - 102, TEMPERATURE_POSITION_Y - 15, TEMPERATURE_WIDTH, TEMPERATURE_HEIGHT, BACKGROUND_COLOR);
+}
+
+void drawTemperature(float value) {
+    cleanTemperature();
+    int8_t integerPart = (int8_t)value;
+    uint8_t decimalPart = (uint8_t)round((abs(value) - abs(integerPart)) * 10);
+    char buff[5] = {0};
+
+    snprintf(buff, 4, "%d.", integerPart);
+    tft.drawRightString(buff, TEMPERATURE_POSITION_X - 30, TEMPERATURE_POSITION_Y - 13, 6);
+
+    snprintf(buff, 2, "%d", decimalPart);
+    tft.drawRightString(buff, TEMPERATURE_POSITION_X - 16, TEMPERATURE_POSITION_Y + 4, 4);
+}
+
+void cleanTime() {
+    tft.fillRect(CLOCK_POSITION_X - CLOCK_WIDTH + 2, CLOCK_POSITION_Y - 1, CLOCK_WIDTH, CLOCK_HEIGHT, BACKGROUND_COLOR);
+}
+
+void drawTime(time_t* now) {
+    if (pollutionWarningInitialized) {
+        return;
+    }
+    cleanTime();
+    char buff[6] = {0};
+    struct tm *tmp = gmtime(now);
+    snprintf(buff, 6, "%02d:%02d", tmp->tm_hour + TIMEZONE_OFFSET, tmp->tm_min);
+
+    tft.setTextColor(CLOCK_COLOR, BACKGROUND_COLOR);
+    tft.drawRightString(buff, 123, 91, 4);
+    tft.setTextColor(FOREGROUND_COLOR, BACKGROUND_COLOR);
+}
+
+void drawTime() {
+    time_t now;
+    time(&now);
+    drawTime(&now);
+}
+
+void cleanPollutionWarning() {
+    tft.fillRect(WARNING_POSITION_X - 30, WARNING_POSITION_Y - 20, WARNING_WIDTH, WARNING_HEIGHT, BACKGROUND_COLOR);
+}
+
+void drawPollutionWarning() {
+    cleanPollutionWarning();
+    tft.fillTriangle(WARNING_POSITION_X, WARNING_POSITION_Y - 18, WARNING_POSITION_X + 28, WARNING_POSITION_Y + 28, WARNING_POSITION_X - 28, WARNING_POSITION_Y + 28, FOREGROUND_COLOR);
+    tft.fillTriangle(WARNING_POSITION_X, WARNING_POSITION_Y - 14, WARNING_POSITION_X + 24, WARNING_POSITION_Y + 26, WARNING_POSITION_X - 24, WARNING_POSITION_Y + 26, COLOR_RED);
+    tft.setTextColor(FOREGROUND_COLOR, COLOR_RED);
+    tft.drawCentreString("!", WARNING_POSITION_X, WARNING_POSITION_Y, 4);
+    tft.setTextColor(FOREGROUND_COLOR, BACKGROUND_COLOR);
+    tft.drawRightString("C O", WARNING_POSITION_X + 65, WARNING_POSITION_Y - 7, 4);
 }
 
 void drawPollutionUnits() {
-    tft.drawRightString("M", 118, 136, 1);
-    tft.drawLine(119, 136, 122, 136, COLOR_WHITE);
-    tft.drawLine(119, 136, 119, 142, COLOR_WHITE);
+    tft.drawRightString("M", POLLUTION_POSITION_X - 7, POLLUTION_POSITION_Y + 1, 1);
+    tft.drawLine(POLLUTION_POSITION_X - 6, POLLUTION_POSITION_Y + 1, POLLUTION_POSITION_X - 3, POLLUTION_POSITION_Y + 1, POLLUTION_COLOR);
+    tft.drawLine(POLLUTION_POSITION_X - 6, POLLUTION_POSITION_Y + 1, POLLUTION_POSITION_X - 6, POLLUTION_POSITION_Y + 7, POLLUTION_COLOR);
 
-    tft.drawLine(110, 144, 124, 144, COLOR_WHITE);
+    tft.drawLine(POLLUTION_POSITION_X - 15, POLLUTION_POSITION_Y + 9, POLLUTION_POSITION_X - 1, POLLUTION_POSITION_Y + 9, POLLUTION_COLOR);
 
-    tft.drawRightString("M", 118, 147, 1);
-    tft.drawRightString("3", 125, 146, 1);
+    tft.drawRightString("M", POLLUTION_POSITION_X - 7, POLLUTION_POSITION_Y + 12, 1);
+    tft.drawRightString("3", POLLUTION_POSITION_X, POLLUTION_POSITION_Y + 11, 1);
 }
 
-void drawTemperatureUnits() {
-    tft.fillCircle(115, 17, 3, COLOR_WHITE);
-    tft.fillCircle(115, 17, 2, COLOR_BLACK);
-    tft.drawRightString("C", 126, 18, 2);
+void cleanPollution() {
+    tft.fillRect(POLLUTION_POSITION_X - 99, POLLUTION_POSITION_Y, POLLUTION_WIDTH, POLLUTION_HEIGHT, BACKGROUND_COLOR);
 }
 
-void drawPressureUnits() {
-    tft.setTextColor(COLOR_SANDY, COLOR_BLACK);
-    tft.drawRightString("MM", 126, 49, 1);
-    tft.drawRightString("PT", 126, 57, 1);
-    tft.drawRightString("CT", 126, 65, 1);
-    tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
+void drawPollution(float value) {
+    cleanPollution();
+    if (value >= 0 && value < 10000) {
+        uint16_t integerPart = (uint16_t)value;
+        uint8_t decimalPart = (uint8_t)round((value - integerPart) * 100);
+        char buff[6] = {0};
+
+        snprintf(buff, 3, "%d0", decimalPart);
+        tft.drawRightString(buff, POLLUTION_POSITION_X - 17, POLLUTION_POSITION_Y + 6, 2);
+
+        snprintf(buff, 6, "%d.", integerPart);
+        tft.drawRightString(buff, POLLUTION_POSITION_X - 34, POLLUTION_POSITION_Y, 4);
+    } else {
+        char buff[7] = {0};
+        snprintf(buff, 7, "%.0f", value);
+        tft.drawRightString(buff, POLLUTION_POSITION_X - 18, POLLUTION_POSITION_Y, 4);
+    }
+
+    if (value >= HIGH_POLLUTION_VALUE) {
+        if (!pollutionWarningInitialized) {
+            drawPollutionWarning();
+            pollutionWarningInitialized = true;
+        }
+    } else {
+        if (pollutionWarningInitialized) {
+            cleanPollutionWarning();
+            pollutionWarningInitialized = false;
+            drawTime();
+        }
+    }
 }
 
 void drawPressureIcon() {
-    tft.fillTriangle(28, 63, 31, 67, 34, 63, COLOR_SANDY);
-    tft.fillRect(30, 56, 3, 7, COLOR_SANDY);
+    tft.fillTriangle(PRESSURE_POSITION_X - 98, PRESSURE_POSITION_Y + 12, PRESSURE_POSITION_X - 95, PRESSURE_POSITION_Y + 16, PRESSURE_POSITION_X - 92, PRESSURE_POSITION_Y + 12, PRESSURE_COLOR);
+    tft.fillRect(PRESSURE_POSITION_X - 96, PRESSURE_POSITION_Y + 5, 3, 7, PRESSURE_COLOR);
 
-    tft.fillTriangle(34, 62, 37, 66, 40, 62, COLOR_SANDY);
-    tft.fillRect(36, 57, 3, 6, COLOR_SANDY);
+    tft.fillTriangle(PRESSURE_POSITION_X - 92, PRESSURE_POSITION_Y + 11, PRESSURE_POSITION_X - 89, PRESSURE_POSITION_Y + 15, PRESSURE_POSITION_X - 86, PRESSURE_POSITION_Y + 11, PRESSURE_COLOR);
+    tft.fillRect(PRESSURE_POSITION_X - 90, PRESSURE_POSITION_Y + 6, 3, 6, PRESSURE_COLOR);
+}
+
+void drawPressureUnits() {
+    tft.setTextColor(PRESSURE_COLOR, BACKGROUND_COLOR);
+    tft.drawRightString("MM", PRESSURE_POSITION_X, PRESSURE_POSITION_Y - 2, 1);
+    tft.drawRightString("PT", PRESSURE_POSITION_X, PRESSURE_POSITION_Y + 6, 1);
+    tft.drawRightString("CT", PRESSURE_POSITION_X, PRESSURE_POSITION_Y + 14, 1);
+    tft.setTextColor(FOREGROUND_COLOR, BACKGROUND_COLOR);
+}
+
+void cleanPressure(float value) {
+    if (value >= 1000 || value < -100) {
+        tft.fillRect(PRESSURE_POSITION_X - 101, PRESSURE_POSITION_Y, PRESSURE_WIDTH, PRESSURE_HEIGHT, BACKGROUND_COLOR);
+        pressureIconInitialized = false;
+    } else {
+        if (!pressureIconInitialized) {
+            tft.fillRect(PRESSURE_POSITION_X - 101, PRESSURE_POSITION_Y, PRESSURE_WIDTH, PRESSURE_HEIGHT, BACKGROUND_COLOR);
+            drawPressureIcon();
+            pressureIconInitialized = true;
+        } else {
+            tft.fillRect(PRESSURE_POSITION_X - 85, PRESSURE_POSITION_Y, PRESSURE_WIDTH - 16, PRESSURE_HEIGHT, BACKGROUND_COLOR);
+        }
+    }
+}
+
+void drawPressure(float value) {
+    cleanPressure(value);
+    tft.setTextColor(PRESSURE_COLOR, BACKGROUND_COLOR);
+    if (value > 0 && value < 10000) {
+        uint16_t integerPart = (uint16_t)value;
+        uint8_t decimalPart = (uint8_t)round((value - integerPart) * 100);
+        char buff[5] = {0};
+
+        snprintf(buff, 3, "%d0", decimalPart);
+        tft.drawRightString(buff, PRESSURE_POSITION_X - 14, PRESSURE_POSITION_Y + 6, 2);
+
+        snprintf(buff, 6, "%d.", integerPart);
+        tft.drawRightString(buff, PRESSURE_POSITION_X - 34, PRESSURE_POSITION_Y, 4);
+    } else {
+        char buff[8] = {0};
+        snprintf(buff, 8, "%.0f", value);
+        tft.drawRightString(buff, PRESSURE_POSITION_X - 14, PRESSURE_POSITION_Y, 4);
+    }
+    tft.setTextColor(FOREGROUND_COLOR, BACKGROUND_COLOR);
+}
+
+void initThermometer() {
+    tft.fillSmoothRoundRect(THERMOMETER_X - THERMOMETER_BORDER, THERMOMETER_Y - THERMOMETER_BORDER, THERMOMETER_WIDTH + 2 * THERMOMETER_BORDER, THERMOMETER_MAX_LENGTH + 2 * THERMOMETER_BORDER, round(THERMOMETER_WIDTH + 2 * THERMOMETER_BORDER) + 1, FOREGROUND_COLOR, FOREGROUND_COLOR);
+    tft.fillSmoothCircle(13, 144, THERMOMETER_RADIUS + THERMOMETER_BORDER, FOREGROUND_COLOR, FOREGROUND_COLOR);
+    tft.fillSmoothCircle(13, 144, THERMOMETER_RADIUS, COLOR_RED, COLOR_RED);
+    tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, BACKGROUND_COLOR, BACKGROUND_COLOR);
 }
 
 void drawThermometer(float value) {
@@ -62,198 +189,20 @@ void drawThermometer(float value) {
     } else {
         mercuryValue = round((value - THERMOMETER_MIN_TEMPERATURE) * THERMOMETER_STEP);
     }
-    tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, COLOR_BLACK, COLOR_BLACK);
+    tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, BACKGROUND_COLOR, BACKGROUND_COLOR);
     tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y + THERMOMETER_MAX_LENGTH - mercuryValue, THERMOMETER_WIDTH, mercuryValue, THERMOMETER_WIDTH, COLOR_RED, COLOR_RED);
 
     for (uint8_t idx = 0; idx < THERMOMETER_MAX_TEMPERATURE - THERMOMETER_MIN_TEMPERATURE - 1; idx++) {
         if (!idx) {
             continue;
         }
-        tft.fillRect(THERMOMETER_SCALE_UNIT_X, round(THERMOMETER_Y + idx * THERMOMETER_STEP), THERMOMETER_SCALE_UNIT_LENGTH, THERMOMETER_SCALE_UNIT_WIDTH, COLOR_WHITE);
+        tft.fillRect(THERMOMETER_SCALE_UNIT_X, round(THERMOMETER_Y + idx * THERMOMETER_STEP), THERMOMETER_SCALE_UNIT_LENGTH, THERMOMETER_SCALE_UNIT_WIDTH, FOREGROUND_COLOR);
     }
-}
-
-void cleanTemperature() {
-    tft.fillRect(24, 3, 88, 40, COLOR_BLACK);
-}
-
-void drawTemperature(float value) {
-    cleanTemperature();
-    int8_t integerPart = (int8_t)value;
-    uint8_t decimalPart = (uint8_t)round((abs(value) - abs(integerPart)) * 10);
-    char buff[5] = {0};
-
-    snprintf(buff, 4, "%d.", integerPart);
-    tft.drawRightString(buff, 96, 5, 6);
-
-    snprintf(buff, 2, "%d", decimalPart);
-    tft.drawRightString(buff, 110, 22, 4);
-}
-
-void cleanTemperatureChart() {
-
-}
-
-#define TEMPERATURE_CHART_X 26
-#define TEMPERATURE_CHART_Y 44
-#define TEMPERATURE_CHART_WIDTH 100
-#define TEMPERATURE_CHART_HEIGHT 30
-#define TEMPERATURE_CHART_X_STEP TEMPERATURE_CHART_WIDTH / HISTORY_LENGTH
-
-void drawTemperatureChart() {
-    history_t* history = getHistory();
-    if (history->length < 1) {
-        return;
-    }
-    history_record_t* record = history->first;
-    float minValue = 1000.0;
-    float maxValue = -274.0;
-    while (record) {
-        if (record->measurement->temperature > maxValue)
-            maxValue = record->measurement->temperature;
-        if (record->measurement->temperature < minValue)
-            minValue = record->measurement->temperature;
-        record = record->next;
-    }
-    float yAxisRange = maxValue - minValue;
-    float coldValue = yAxisRange / 3.0;
-    float hotValue = yAxisRange - coldValue;
-    float yStep = TEMPERATURE_CHART_HEIGHT / yAxisRange;
-    history_record_t* prev = history->first;
-    record = history->first;
-    tft.drawRect(TEMPERATURE_CHART_X, TEMPERATURE_CHART_Y, TEMPERATURE_CHART_WIDTH, TEMPERATURE_CHART_HEIGHT, COLOR_WHITE);
-    
-    int recordIdx = 0;
-    uint16_t color = COLOR_WHITE;
-    while (record) {
-        float value = prev->measurement->temperature;
-        // Serial.printf(", %d", value);
-        if (value >= hotValue) {
-            color = COLOR_RED;
-        } else if (value >= coldValue) {
-            color = COLOR_OLIVE;
-        } else {
-            color = COLOR_BLUE;
-        }
-        tft.fillCircle(round(TEMPERATURE_CHART_X + recordIdx * TEMPERATURE_CHART_X_STEP), round(TEMPERATURE_CHART_Y + TEMPERATURE_CHART_HEIGHT - (prev->measurement->temperature - minValue) * yStep), 2, color);
-        record = record->next;
-        recordIdx += 1;
-    }
-}
-
-void cleanTime() {
-    tft.fillRect(58, 90, 67, 22, COLOR_BLACK);
-}
-
-void drawTime(time_t* now) {
-    if (pollutionWarningInitialized) {
-        return;
-    }
-    cleanTime();
-    char buff[6] = {0};
-    struct tm *tmp = gmtime(now);
-    snprintf(buff, 6, "%02d:%02d", tmp->tm_hour + 3, tmp->tm_min);
-
-    tft.setTextColor(COLOR_SANDY, COLOR_BLACK);
-    tft.drawRightString(buff, 123, 91, 4);
-    tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
-}
-
-void drawTime() {
-    time_t now;
-    time(&now);
-    drawTime(&now);
-}
-
-void cleanPollutionWarning() {
-    tft.fillRect(28, 78, 97, 52, COLOR_BLACK);
-}
-
-void drawPollutionWarning() {
-    cleanPollutionWarning();
-    tft.fillTriangle(58, 80, 86, 126, 30, 126, COLOR_WHITE);
-    tft.fillTriangle(58, 84, 82, 124, 34, 124, COLOR_RED);
-    tft.setTextColor(COLOR_WHITE, COLOR_RED);
-    tft.drawCentreString("!", 58, 98, 4);
-    tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
-    tft.drawRightString("C O", 123, 91, 4);
-}
-
-void cleanPollution() {
-    tft.fillRect(26, 135, 82, 21, COLOR_BLACK);
-}
-
-void drawPollution(float value) {
-    cleanPollution();
-    if (value >= 0 && value < 10000) {
-        uint16_t integerPart = (uint16_t)value;
-        uint8_t decimalPart = (uint8_t)round((value - integerPart) * 100);
-        char buff[6] = {0};
-
-        snprintf(buff, 3, "%d0", decimalPart);
-        tft.drawRightString(buff, 108, 141, 2);
-
-        snprintf(buff, 6, "%d.", integerPart);
-        tft.drawRightString(buff, 91, 135, 4);
-    } else {
-        char buff[7] = {0};
-        snprintf(buff, 7, "%.0f", value);
-        tft.drawRightString(buff, 107, 135, 4);
-    }
-
-    if (value >= HIGH_POLLUTION_VALUE) {
-        if (!pollutionWarningInitialized) {
-            drawPollutionWarning();
-            pollutionWarningInitialized = true;
-        }
-    } else {
-        if (pollutionWarningInitialized) {
-            cleanPollutionWarning();
-            pollutionWarningInitialized = false;
-            drawTime();
-        }
-    }
-}
-
-void cleanPressure(float value) {
-    if (value >= 1000 || value < -100) {
-        tft.fillRect(25, 51, 87, 20, COLOR_BLACK);
-        pressureIconInitialized = false;
-    } else {
-        if (!pressureIconInitialized) {
-            tft.fillRect(25, 51, 87, 20, COLOR_BLACK);
-            drawPressureIcon();
-            pressureIconInitialized = true;
-        } else {
-            tft.fillRect(41, 51, 71, 20, COLOR_BLACK);
-        }
-    }
-}
-
-void drawPressure(float value) {
-    cleanPressure(value);
-    tft.setTextColor(COLOR_SANDY, COLOR_BLACK);
-    if (value > 0 && value < 10000) {
-        uint16_t integerPart = (uint16_t)value;
-        uint8_t decimalPart = (uint8_t)round((value - integerPart) * 100);
-        char buff[5] = {0};
-
-        snprintf(buff, 3, "%d0", decimalPart);
-        tft.drawRightString(buff, 112, 57, 2);
-
-        snprintf(buff, 6, "%d.", integerPart);
-        tft.drawRightString(buff, 92, 51, 4);
-    } else {
-        char buff[8] = {0};
-        snprintf(buff, 8, "%.0f", value);
-        tft.drawRightString(buff, 112, 51, 4);
-    }
-    tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
 }
 
 bool setupDisplay() {
     tft.init();
-    tft.fillScreen(COLOR_BLACK);
-    tft.setTextColor(COLOR_WHITE, COLOR_BLACK);
+    tft.fillScreen(BACKGROUND_COLOR);
+    tft.setTextColor(FOREGROUND_COLOR, BACKGROUND_COLOR);
     return true;
 }

@@ -3,10 +3,9 @@
 #include "network.h"
 #include "display.h"
 
+// TODO: Periodical time sync via NTP
 // TODO: Wifi ssid and password configuration via bluetooth
 // TODO: Use average value for pollution
-// TODO: Periodical time sync via NTP
-// TODO: Measure often, but write to history only every hour
 
 hw_timer_t* measurement_timer = NULL;
 bool perform_periodical_measurement = false;
