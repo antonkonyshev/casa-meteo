@@ -1,9 +1,4 @@
 #include "main.h"
-#include "pinout.h"
-#include "network.h"
-#include "display.h"
-
-// TODO: Wifi ssid and password configuration via bluetooth
 
 hw_timer_t* measurement_timer = NULL;
 bool perform_periodical_measurement = false;
@@ -13,81 +8,36 @@ void performPeriodicalMeasurement() {
     perform_periodical_measurement = true;
 }
 
-void setup() {
-    Serial.begin(9600);
-    delay(1000);
-    Serial.println("");
-    Serial.println("--------------------------------- Meteo ---------------------------------");
-
-    Serial.print("Initializing LED indication ...");
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, HIGH);
-    Serial.println(" [ Done ]");
-
-    Serial.print("Disabling Bluetooth module ...");
-    if (btStop()) {
-        Serial.println(" [ Done ]");
-    } else {
-        Serial.print(" [ Fail ]");
-    }
-
-    Serial.print("Initializing TFT display ...");
-    if (setupDisplay()) {
-        Serial.println(" [ Done ]");
-    } else {
-        Serial.println(" [ Fail ]");
-    }
-
-    Serial.print("Initializing BMP280 sensor ...");
-    if (setupBmp280()) {
-        Serial.println(" [ Done ]");
-    } else {
-        Serial.println(" [ Fail ]");
-    }
-
-    Serial.print("Initializing MQ-7 sensor ...");
-    if (setupMq7()) {
-        Serial.println(" [ Done ]");
-    } else {
-        Serial.println(" [ Fail ]");
-    }
-
-    setupHistory();
-
-    Serial.print("Connecting to WiFi network ...");
-    if (setupWifi()) {
-      Serial.println(" [ Done ]");
-    } else {
-      Serial.println(" [ Fail ]");
-    }
-
-    Serial.print("Setting up the real time clock ...");
-    if (setupRTC()) {
-      Serial.println(" [ Done ]");
-    } else {
-      Serial.println(" [ Fail ]");
-    }
-
-    Serial.print("Starting HTTP API server ...");
-    setupRouting();
-    Serial.println(" [ Done ]");
-
-    Serial.print("Setting up timers ...");
+void setupTimers() {
     measurement_timer = timerBegin(0, 8000, true);
     timerAttachInterrupt(measurement_timer, &performPeriodicalMeasurement, true);
     timerAlarmWrite(measurement_timer, MEASUREMENT_PERIOD * 10000, true);
     timerAlarmEnable(measurement_timer);
-    Serial.println(" [ Done ]");
+}
 
-    Serial.print("Local IP address: ");
-    Serial.println(WiFi.localIP());
+void setup() {
+    Serial.begin(9600);
+    delay(100);
+    Serial.println("");
+    Serial.println("--------------------------------- Meteo ---------------------------------");
 
-    Serial.printf("Total    heap: %8d bytes     |     Free    heap: %8d bytes\n", ESP.getHeapSize(), ESP.getFreeHeap());
-    Serial.printf("Total PSRAM: %8d bytes     |     Free PSRAM: %8d bytes\n", ESP.getPsramSize(), ESP.getFreePsram());
-    Serial.printf("Sketch size: %8d bytes     |     Free space: %8d bytes\n", ESP.getSketchSize(), ESP.getFreeSketchSpace());
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, HIGH);
+    btStop();
+    setupDisplay();
+    setupBmp280();
+    setupMq7();
+    setupWifi();
+    setupRTC();
+    setupRouting();
+    setupTimers();
 
     Serial.println("");
-    loadSensorData();
+    Serial.printf("Total  heap: %8d bytes     |     Free  heap: %8d bytes\n", ESP.getHeapSize(), ESP.getFreeHeap());
+    Serial.printf("Total PSRAM: %8d bytes     |     Free PSRAM: %8d bytes\n", ESP.getPsramSize(), ESP.getFreePsram());
+    Serial.printf("Sketch size: %8d bytes     |     Free space: %8d bytes\n", ESP.getSketchSize(), ESP.getFreeSketchSpace());
+    Serial.println("");
+
     digitalWrite(LED_PIN, LOW);
 }
 
@@ -96,15 +46,9 @@ void loop() {
     if (perform_periodical_measurement) {
         digitalWrite(LED_PIN, HIGH);
         measurement_t* measurement = loadSensorData();
-        Serial.print("Temperature: ");
-        Serial.print(measurement->temperature);
-        Serial.print(" °C     |     Pressure: ");
-        Serial.print(measurement->pressure);
-        Serial.print(" mmHg     |     Altitude: ");
-        Serial.print(measurement->altitude);
-        Serial.print(" m     |     Pollution: ");
-        Serial.print(measurement->pollution);
-        Serial.println(" mgm3");
+        ESP_LOGI("main",
+            "Temperature: %.2f °C   |   Pressure: %.2f mmHg   |   Altitude: %.2f m   |   Pollution: %.2f mg/m3",
+            measurement->temperature, measurement->pressure, measurement->altitude, measurement->pollution);
         perform_periodical_measurement = false;
         periodical_measurements_since_last_time_sync += 1;
         if (periodical_measurements_since_last_time_sync >= TIME_SYNC_PERIODICITY) {

@@ -1,6 +1,4 @@
 #include "sensors.h"
-#include "display.h"
-#include "pinout.h"
 
 Adafruit_BMP280 bmp280;
 
@@ -50,8 +48,7 @@ bool setupMq7() {
 
 measurement_t* loadSensorData() {
     time_t now;
-    measurement_t* measurement;
-    measurement = (measurement_t*) malloc(sizeof(measurement_t));
+    measurement_t* measurement = new measurement_t;
 
     time(&now);
     measurement->timestamp = now;

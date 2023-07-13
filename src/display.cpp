@@ -1,5 +1,4 @@
 #include "display.h"
-#include "measurement.h"
 
 TFT_eSPI tft = TFT_eSPI();
 bool thermometerInitialized = false;

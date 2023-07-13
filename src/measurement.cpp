@@ -2,30 +2,24 @@
 
 history_t* history;
 
-history_t* setupHistory() {
-    history = (history_t*) malloc(sizeof(history_t));
-    history->first = nullptr;
-    history->last = nullptr;
-    history->length = 0;
-    return history;
-}
-
-void freeHistory() {
+void cleanHistory() {
     if (history->first) {
         history_record_t* currentNode = history->first;
         while (currentNode) {
             history_record_t* oldNode = currentNode;
             currentNode = currentNode->next;
-            free(oldNode->measurement);
-            free(oldNode);
+            delete oldNode->measurement;
+            delete oldNode;
         }
     }
-    free(history);
+    delete history;
 }
 
 history_record_t* appendToHistory(measurement_t* measurement) {
-    history_record_t* newNode = (history_record_t*) malloc(sizeof(history_record_t));
-    newNode->next = nullptr;
+    if (!history) {
+        history = new history_t;
+    }
+    history_record_t* newNode = new history_record_t;
     newNode->measurement = measurement;
 
     if (history->last) {
@@ -37,8 +31,8 @@ history_record_t* appendToHistory(measurement_t* measurement) {
             history_record_t* oldNode = history->first;
             history->first = oldNode->next;
             history->length -= 1;
-            free(oldNode->measurement);
-            free(oldNode);
+            delete oldNode->measurement;
+            delete oldNode;
         }
     } else {
         history->first = newNode;
@@ -50,7 +44,7 @@ history_record_t* appendToHistory(measurement_t* measurement) {
 }
 
 history_record_t* periodicalAppendToHistory(measurement_t* measurement) {
-    if (history->length < HISTORY_LENGTH || measurement->timestamp >= history->last->measurement->timestamp + HISTORY_RECORDS_PERIOD) {
+    if (!history || history->length < HISTORY_LENGTH || measurement->timestamp >= history->last->measurement->timestamp + HISTORY_RECORDS_PERIOD) {
         return appendToHistory(measurement);
     }
     return NULL;

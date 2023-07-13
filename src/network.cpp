@@ -1,5 +1,4 @@
 #include "network.h"
-#include "pinout.h"
 
 WiFiMulti wifiMulti;
 
@@ -93,6 +92,7 @@ void wifiKeepAlive() {
     digitalWrite(LED_PIN, LOW);
 }
 
+// TODO: Wifi ssid and password configuration via bluetooth and AP mode
 bool setupWifi() {
     WiFi.mode(WIFI_MODE_STA);
     wifi_credentials_t* credentials = loadWiFiCredentials();

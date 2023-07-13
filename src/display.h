@@ -1,8 +1,6 @@
 #include <TFT_eSPI.h>
 #include <SPI.h>
 
-#include "pinout.h"
-
 // TODO: make HIGH_POLLUTION_VALUE an editable setting controlled from the application.
 #define HIGH_POLLUTION_VALUE 20  // mgm3, warns a user in case if the current pollution value is higher
 

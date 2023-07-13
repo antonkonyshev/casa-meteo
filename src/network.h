@@ -4,8 +4,9 @@
 #define ARDUINOJSON_USE_DOUBLE 0
 #include <ArduinoJson.h>
 
-#include "sensors.h"
+#include "pinout.h"
 #include "preferences.h"
+#include "sensors.h"
 
 #define API_PORT 80
 

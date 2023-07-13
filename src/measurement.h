@@ -15,12 +15,16 @@ typedef struct history_record_s {
     measurement_t* measurement;
     history_record_s* next;
     history_record_s* prev;
+
+    history_record_s() : next(nullptr), prev(nullptr) {}
 } history_record_t;
 
 typedef struct history_s {
     history_record_t* first;
     history_record_t* last;
     unsigned int length;
+
+    history_s() : first(nullptr), last(nullptr), length(0) {}
 } history_t;
 
 history_record_t* appendToHistory(measurement_t*);

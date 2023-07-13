@@ -3,5 +3,9 @@
 #include <Arduino.h>
 #include <time.h>
 
+#include "pinout.h"
+#include "network.h"
+#include "display.h"
+
 #define MEASUREMENT_PERIOD 5  // seconds
 #define TIME_SYNC_PERIODICITY 120  // every N periodical measurements (to don't use separate MCU timer for this)
