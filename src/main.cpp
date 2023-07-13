@@ -3,12 +3,11 @@
 #include "network.h"
 #include "display.h"
 
-// TODO: Periodical time sync via NTP
 // TODO: Wifi ssid and password configuration via bluetooth
-// TODO: Use average value for pollution
 
 hw_timer_t* measurement_timer = NULL;
 bool perform_periodical_measurement = false;
+bool periodical_measurements_since_last_time_sync = 0;
 
 void performPeriodicalMeasurement() {
     perform_periodical_measurement = true;
@@ -106,6 +105,11 @@ void loop() {
         Serial.print(measurement->pollution);
         Serial.println(" mgm3");
         perform_periodical_measurement = false;
+        periodical_measurements_since_last_time_sync += 1;
+        if (periodical_measurements_since_last_time_sync >= TIME_SYNC_PERIODICITY) {
+            periodical_measurements_since_last_time_sync = 0;
+            configTime(0, 0, NTP_SERVER_1, NTP_SERVER_2, NTP_SERVER_3);
+        }
         digitalWrite(LED_PIN, LOW);
     }
 }
