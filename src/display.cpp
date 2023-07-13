@@ -1,4 +1,5 @@
-#include <display.h>
+#include "display.h"
+#include "measurement.h"
 
 TFT_eSPI tft = TFT_eSPI();
 bool thermometerInitialized = false;
@@ -89,10 +90,56 @@ void drawTemperature(float value) {
     tft.drawRightString(buff, 110, 22, 4);
 }
 
-/*
-void drawTemperatureChart(float* history) {
+void cleanTemperatureChart() {
+
 }
-*/
+
+#define TEMPERATURE_CHART_X 26
+#define TEMPERATURE_CHART_Y 44
+#define TEMPERATURE_CHART_WIDTH 100
+#define TEMPERATURE_CHART_HEIGHT 30
+#define TEMPERATURE_CHART_X_STEP TEMPERATURE_CHART_WIDTH / HISTORY_LENGTH
+
+void drawTemperatureChart() {
+    history_t* history = getHistory();
+    if (history->length < 1) {
+        return;
+    }
+    history_record_t* record = history->first;
+    float minValue = 1000.0;
+    float maxValue = -274.0;
+    while (record) {
+        if (record->measurement->temperature > maxValue)
+            maxValue = record->measurement->temperature;
+        if (record->measurement->temperature < minValue)
+            minValue = record->measurement->temperature;
+        record = record->next;
+    }
+    float yAxisRange = maxValue - minValue;
+    float coldValue = yAxisRange / 3.0;
+    float hotValue = yAxisRange - coldValue;
+    float yStep = TEMPERATURE_CHART_HEIGHT / yAxisRange;
+    history_record_t* prev = history->first;
+    record = history->first;
+    tft.drawRect(TEMPERATURE_CHART_X, TEMPERATURE_CHART_Y, TEMPERATURE_CHART_WIDTH, TEMPERATURE_CHART_HEIGHT, COLOR_WHITE);
+    
+    int recordIdx = 0;
+    uint16_t color = COLOR_WHITE;
+    while (record) {
+        float value = prev->measurement->temperature;
+        // Serial.printf(", %d", value);
+        if (value >= hotValue) {
+            color = COLOR_RED;
+        } else if (value >= coldValue) {
+            color = COLOR_OLIVE;
+        } else {
+            color = COLOR_BLUE;
+        }
+        tft.fillCircle(round(TEMPERATURE_CHART_X + recordIdx * TEMPERATURE_CHART_X_STEP), round(TEMPERATURE_CHART_Y + TEMPERATURE_CHART_HEIGHT - (prev->measurement->temperature - minValue) * yStep), 2, color);
+        record = record->next;
+        recordIdx += 1;
+    }
+}
 
 void cleanTime() {
     tft.fillRect(58, 90, 67, 22, COLOR_BLACK);

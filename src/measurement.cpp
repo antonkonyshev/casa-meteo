@@ -49,6 +49,13 @@ history_record_t* appendToHistory(measurement_t* measurement) {
     return newNode;
 }
 
+history_record_t* periodicalAppendToHistory(measurement_t* measurement) {
+    if (history->length < HISTORY_LENGTH || measurement->timestamp >= history->last->measurement->timestamp + HISTORY_RECORDS_PERIOD) {
+        return appendToHistory(measurement);
+    }
+    return NULL;
+}
+
 history_t* getHistory() {
     return history;
 }

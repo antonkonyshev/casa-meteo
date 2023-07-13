@@ -69,7 +69,6 @@ measurement_t* loadSensorData() {
     measurement->pollution = readPollution();
     drawPollution(measurement->pollution);
 
-    appendToHistory(measurement);
-    // drawTemperatureChart(history);
+    periodicalAppendToHistory(measurement);
     return measurement;
 }

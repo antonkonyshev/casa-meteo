@@ -1,6 +1,7 @@
 #include <cstdlib>
 
-#define HISTORY_LENGTH 50    // 300    // measurements
+#define HISTORY_LENGTH 50  // number of measurements stored in history
+#define HISTORY_RECORDS_PERIOD 1800  // seconds
 
 typedef struct measurement_s {
     uint32_t timestamp;    // UTC timezone
@@ -23,5 +24,6 @@ typedef struct history_s {
 } history_t;
 
 history_record_t* appendToHistory(measurement_t*);
+history_record_t* periodicalAppendToHistory(measurement_t*);
 history_t* getHistory();
 history_t* setupHistory();
