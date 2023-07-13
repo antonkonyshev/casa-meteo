@@ -1,8 +1,7 @@
 #include "network.h"
 #include "pinout.h"
 
-static const char* wifi_ssid = "AKTpLAp";
-static const char* wifi_password = "JXfRV9QRD7EaFW6UAPNPoG2BdXB2LcpETSsJmpmX7R9gr5Xn6qoyq2bpLKCn7A4";
+WiFiMulti wifiMulti;
 
 WebServer server(API_PORT);
 
@@ -84,23 +83,27 @@ void setupRouting() {
     server.begin();
 }
 
+void wifiKeepAlive() {
+    uint8_t ledState = LOW;
+    while (wifiMulti.run(WIFI_CONNECTION_TIMEOUT * 1000) != WL_CONNECTED) {
+        ledState = ledState == LOW ? HIGH : LOW;
+        digitalWrite(LED_PIN, ledState);
+        delay(100);
+    }
+    digitalWrite(LED_PIN, LOW);
+}
+
 bool setupWifi() {
     WiFi.mode(WIFI_MODE_STA);
-    WiFi.begin(wifi_ssid, wifi_password);
-    bool ledState = LOW;
-    time_t timeout = millis() + WIFI_CONNECTION_TIMEOUT * 1000;
-    bool result = true;
-    while (WiFi.status() != WL_CONNECTED) {
-        digitalWrite(LED_PIN, ledState);
-        ledState = ledState == LOW ? HIGH : LOW;
-        delay(100);
-        if (millis() > timeout) {
-            result = false;
-            break;
-        }
+    wifi_credentials_t* credentials = loadWiFiCredentials();
+    while (credentials) {
+        wifiMulti.addAP(credentials->ssid.c_str(), credentials->password.c_str());
+        credentials = credentials->next;
     }
+    cleanWiFiCredentials();
+    wifiKeepAlive();
     digitalWrite(LED_PIN, HIGH);
-    return result;
+    return true;
 }
 
 bool setupRTC() {

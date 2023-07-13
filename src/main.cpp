@@ -15,6 +15,7 @@ void performPeriodicalMeasurement() {
 
 void setup() {
     Serial.begin(9600);
+    delay(1000);
     Serial.println("");
     Serial.println("--------------------------------- Meteo ---------------------------------");
 
@@ -108,6 +109,7 @@ void loop() {
         periodical_measurements_since_last_time_sync += 1;
         if (periodical_measurements_since_last_time_sync >= TIME_SYNC_PERIODICITY) {
             periodical_measurements_since_last_time_sync = 0;
+            wifiKeepAlive();
             configTime(0, 0, NTP_SERVER_1, NTP_SERVER_2, NTP_SERVER_3);
         }
         digitalWrite(LED_PIN, LOW);
