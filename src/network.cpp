@@ -26,6 +26,7 @@ void getServiceInfoResponse() {
     char buffer[256] = { '\0' };
     json_document["service"] = "meteo";
     json_document["name"] = "Room";
+    json_document["id"] = "country-house-room-1";
     JsonArray sensors = json_document.createNestedArray("sensors");
     sensors.add("temperature");
     sensors.add("pressure");
