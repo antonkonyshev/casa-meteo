@@ -1,9 +1,23 @@
 #include <string>
 #include <nvs_flash.h>
 
+#define NVS_PREFERENCES_STORAGE_NAME "storage"
 #define NVS_WIFI_SSID_CREDENTIALS_KEY "wifi_ssid"
 #define NVS_WIFI_PASSWORD_CREDENTIALS_KEY "wifi_password"
-#define NVS_CREDENTIALS_STORAGE_NAME "credentials"
+#define NVS_HIGH_POLLUTION_VALUE_KEY "high_pollution"
+#define NVS_HIGH_POLLUTION_VALUE_DEFAULT 20
+#define NVS_MAX_THERMOMETER_TEMPERATURE_KEY "max_temperature"
+#define NVS_MAX_THERMOMETER_TEMPERATURE_DEFAULT 24
+#define NVS_MIN_THERMOMETER_TEMPERATURE_KEY "min_temperature"
+#define NVS_MIN_THERMOMETER_TEMPERATURE_DEFAULT 14
+#define NVS_MEASUREMENT_PERIOD_KEY "measurement_period"
+#define NVS_MEASUREMENT_PERIOD_DEFAULT 15
+#define NVS_TIME_SYNC_PERIODICITY_KEY "time_sync_periodicity"
+#define NVS_TIME_SYNC_PERIODICITY_DEFAULT 120
+#define NVS_HISTORY_LENGTH_KEY "history_length"
+#define NVS_HISTORY_LENGTH_DEFAULT 50
+#define NVS_HISTORY_RECORDS_PERIOD_KEY "history_records_period"
+#define NVS_HISTORY_RECORDS_PERIOD_DEFAULT 1800
 
 typedef struct wifi_credentials_s {
     std::string ssid;
@@ -13,6 +27,27 @@ typedef struct wifi_credentials_s {
     wifi_credentials_s() : next(nullptr) {}
 } wifi_credentials_t;
 
+typedef struct preferences_s {
+    uint16_t high_pollution_value;
+    int8_t min_thermometer_temperature;
+    int8_t max_thermometer_temperature;
+    uint16_t measurement_period;
+    uint8_t time_sync_periodicity;
+    uint16_t history_length;
+    uint16_t history_records_period;
+    std::string wifi_ssid;
+    std::string wifi_password;
+
+    preferences_s() : high_pollution_value(0),
+        min_thermometer_temperature(0), max_thermometer_temperature(0),
+        measurement_period(0), time_sync_periodicity(0),
+        history_length(0), history_records_period(0),
+        wifi_ssid(""), wifi_password("") {}
+} preferences_t;
+
 wifi_credentials_t* loadWiFiCredentials();
 void saveWiFiCredentials(const char* ssid, const char* password);
 void cleanWiFiCredentials();
+void saveSettings(preferences_t* prefs);
+void setupPreferences();
+preferences_t* getPreferences();

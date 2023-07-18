@@ -99,7 +99,7 @@ void drawPollution(float value) {
         tft.drawRightString(buff, POLLUTION_POSITION_X - 18, POLLUTION_POSITION_Y, 4);
     }
 
-    if (value >= HIGH_POLLUTION_VALUE) {
+    if (value >= getPreferences()->high_pollution_value) {
         if (!pollutionWarningInitialized) {
             drawPollutionWarning();
             pollutionWarningInitialized = true;
@@ -181,21 +181,23 @@ void drawThermometer(float value) {
         thermometerInitialized = true;
     }
     uint16_t mercuryValue;
-    if (value <= THERMOMETER_MIN_TEMPERATURE) {
-        mercuryValue = THERMOMETER_STEP;
-    } else if (value >= THERMOMETER_MAX_TEMPERATURE) {
+    preferences_t* preferences = getPreferences();
+    float thermometerStep = (THERMOMETER_MAX_LENGTH / (preferences->max_thermometer_temperature - preferences->min_thermometer_temperature));
+    if (value <= preferences->min_thermometer_temperature) {
+        mercuryValue = thermometerStep;
+    } else if (value >= preferences->max_thermometer_temperature) {
         mercuryValue = THERMOMETER_MAX_LENGTH;
     } else {
-        mercuryValue = round((value - THERMOMETER_MIN_TEMPERATURE) * THERMOMETER_STEP);
+        mercuryValue = round((value - preferences->min_thermometer_temperature) * thermometerStep);
     }
     tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y, THERMOMETER_WIDTH, THERMOMETER_MAX_LENGTH, THERMOMETER_WIDTH, BACKGROUND_COLOR, BACKGROUND_COLOR);
     tft.fillSmoothRoundRect(THERMOMETER_X, THERMOMETER_Y + THERMOMETER_MAX_LENGTH - mercuryValue, THERMOMETER_WIDTH, mercuryValue, THERMOMETER_WIDTH, COLOR_RED, COLOR_RED);
 
-    for (uint8_t idx = 0; idx < THERMOMETER_MAX_TEMPERATURE - THERMOMETER_MIN_TEMPERATURE - 1; idx++) {
+    for (uint8_t idx = 0; idx < preferences->max_thermometer_temperature - preferences->min_thermometer_temperature - 1; idx++) {
         if (!idx) {
             continue;
         }
-        tft.fillRect(THERMOMETER_SCALE_UNIT_X, round(THERMOMETER_Y + idx * THERMOMETER_STEP), THERMOMETER_SCALE_UNIT_LENGTH, THERMOMETER_SCALE_UNIT_WIDTH, FOREGROUND_COLOR);
+        tft.fillRect(THERMOMETER_SCALE_UNIT_X, round(THERMOMETER_Y + idx * thermometerStep), THERMOMETER_SCALE_UNIT_LENGTH, THERMOMETER_SCALE_UNIT_WIDTH, FOREGROUND_COLOR);
     }
 }
 

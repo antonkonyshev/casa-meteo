@@ -1,6 +1,11 @@
 #include "sensors.h"
 
 Adafruit_BMP280 bmp280;
+char lastMeasurementSerialized[SERIALIZED_MEASUREMENT_MAX_LENGTH] = {0};
+
+char* getLastMeasurementSerialized() {
+    return lastMeasurementSerialized;
+}
 
 float readTemperature() {
     return round(bmp280.readTemperature() * 100) / 100;
@@ -16,21 +21,6 @@ float readPressure() {
 
 float convertPollutionToMgM3(int value) {
     return (3.027 * exp(1.0698 * (value * (MQ7_VOLTAGE / 4095)))) * (28.06 / 24.45);
-    /*
-    float mq7Voltage = 3.3;
-    int coRaw = analogRead(MQ7_AO);    // Value from 0 to 4095
-    Serial.print(coRaw);
-    Serial.print(" [");
-    double RvRo = coRaw * (MQ7_VOLTAGE / 4095);
-    Serial.print(RvRo);
-    Serial.print("|");
-    int coPpm = 3.027 * exp(1.0698 * RvRo);
-    Serial.print(coPpm);
-    Serial.print(" ppm|");
-    double mgm3 = coPpm * (28.06 / 24.45);
-    Serial.print(mgm3);
-    Serial.println(" mgm3]");
-    */
 }
 
 float readPollution() {
@@ -66,6 +56,15 @@ measurement_t* loadSensorData() {
     measurement->pollution = readPollution();
     drawPollution(measurement->pollution);
 
-    periodicalAppendToHistory(measurement);
+    // This allows us to rid of excess dependency (json serialization) and 
+    // reduce client waiting time, when the client comes to get measurements
+    // everything we need is to send him already prepared char array
+    snprintf(lastMeasurementSerialized, SERIALIZED_MEASUREMENT_MAX_LENGTH,
+        "{\"timestamp\":%d,\"temperature\":%.2f,\"pressure\":%.2f,\"altitude\":%.2f,\"pollution\":%.2f}",
+        measurement->timestamp, measurement->temperature, measurement->pressure, measurement->altitude,
+        measurement->pollution);
+
+    periodicalAppendToHistory(now, std::string(lastMeasurementSerialized));
+
     return measurement;
 }

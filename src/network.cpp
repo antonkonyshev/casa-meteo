@@ -2,84 +2,55 @@
 
 WiFiMulti wifiMulti;
 
-WebServer server(API_PORT);
-
-void createJson(measurement_t* measurement, JsonObject* json_object) {
-    json_object->operator[]("timestamp") = measurement->timestamp;
-    JsonObject obj = json_object->createNestedObject("temperature");
-    obj["value"] = measurement->temperature;
-    obj["unit"] = "°C";
-    obj = json_object->createNestedObject("pressure");
-    obj["value"] = measurement->pressure;
-    obj["unit"] = "mmHg";
-    obj = json_object->createNestedObject("altitude");
-    obj["value"] = measurement->altitude;
-    obj["unit"] = "m";
-    obj = json_object->createNestedObject("pollution");
-    obj["value"] = measurement->pollution;
-    obj["unit"] = "mgm3";
-}
-
-void getServiceInfoResponse() {
-    digitalWrite(LED_PIN, HIGH);
-    StaticJsonDocument<256> json_document;
-    char buffer[256] = { '\0' };
-    json_document["service"] = "meteo";
-    json_document["name"] = "Room";
-    json_document["id"] = "country-house-room-1";
-    JsonArray sensors = json_document.createNestedArray("sensors");
-    sensors.add("temperature");
-    sensors.add("pressure");
-    sensors.add("altitude");
-    sensors.add("pollution");
-    serializeJson(json_document, buffer);
-    server.send(200, "application/json", buffer);
-    digitalWrite(LED_PIN, LOW);
-}
-
-void getMeteoResponse() {
-    digitalWrite(LED_PIN, HIGH);
-    measurement_t* measurement = loadSensorData();
-    StaticJsonDocument<SERIALIZED_MEASUREMENT_MAX_LENGTH> json_document;
-    JsonObject json_object = json_document.to<JsonObject>();
-    createJson(measurement, &json_object);
-    char buffer[SERIALIZED_MEASUREMENT_MAX_LENGTH];
-    serializeJson(json_document, buffer);
-    server.send(200, "application/json", buffer);
-    digitalWrite(LED_PIN, LOW);
-}
-
-void getHistoryResponse() {
-    digitalWrite(LED_PIN, HIGH);
-    server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-    server.send(200, "application/json", "[");
-    history_t* history = getHistory();
-    if (history->first) {
-        char buffer[SERIALIZED_MEASUREMENT_MAX_LENGTH] = { '\0' };
-        history_record_t* record = history->first;
-        while (record) {
-            memset(&buffer[0], 0, sizeof(buffer));
-            StaticJsonDocument<SERIALIZED_MEASUREMENT_MAX_LENGTH> json_document;
-            JsonObject json_object = json_document.to<JsonObject>();
-            createJson(record->measurement, &json_object);
-            if (record != history->first) {
-                server.sendContent(",");
-            }
-            serializeJson(json_document, buffer);
-            server.sendContent(buffer);
-            record = record->next;
-        }
-    }
-    server.sendContent("]");
-    server.sendContent("");
-    server.client().stop();
-    digitalWrite(LED_PIN, LOW);
-}
+AsyncWebServer server(API_PORT);
 
 void setupRouting() {
-    server.on("/", getMeteoResponse);
-    server.on("/service", getServiceInfoResponse);
-    server.on("/history", getHistoryResponse);
+    server.on("/", [](AsyncWebServerRequest* request) {
+        digitalWrite(LED_PIN, HIGH);
+        request->send(200, "application/json", getLastMeasurementSerialized());
+        digitalWrite(LED_PIN, LOW);
+    });
+
+    server.on("/history", [](AsyncWebServerRequest* request) {
+        digitalWrite(LED_PIN, HIGH);
+        history_t* history = getHistory();
+        if (!history->first) {
+            request->send(200, "application/json", "[]");
+            return;
+        }
+        history_record_t* record = history->first;
+        AsyncResponseStream* response = request->beginResponseStream("application/json");
+        response->print("[");
+        while (record) {
+            if (record != history->first) {
+                response->print(",");
+            }
+            response->print(record->measurement.c_str());
+            record = record->next;
+        }
+        response->print("]");
+        request->send(response);
+        digitalWrite(LED_PIN, LOW);
+    });
+
+    server.on("/service", [](AsyncWebServerRequest* request) {
+        digitalWrite(LED_PIN, HIGH);
+        // The service endpoint response is a constant for the service, since it doesn't changes within time while the device is working
+        request->send(200, "application/json", "{\"service\":\"meteo\",\"name\":\"Room\",\"id\":\"country-house-room-1\",\"sensors\":[\"temperature\",\"pressure\",\"altitude\",\"pollution\"]}");
+        digitalWrite(LED_PIN, LOW);
+    });
+
+    server.on("/settings", HTTP_POST, [](AsyncWebServerRequest* request) {
+        digitalWrite(LED_PIN, HIGH);
+        size_t params = request->params();
+        for (int i = 0; i < params; i++) {
+            AsyncWebParameter* param = request->getParam(i);
+            ESP_LOGE("home", "%s=%d", param->name().c_str(), param->value().toInt());
+        }
+        request->send(200);
+        digitalWrite(LED_PIN, LOW);
+    });
+
     server.begin();
 }
 
@@ -127,6 +98,6 @@ bool setupRTC() {
     return result;
 }
 
-WebServer* getServer() {
+AsyncWebServer* getServer() {
     return &server;
 }

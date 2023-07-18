@@ -11,7 +11,7 @@ void performPeriodicalMeasurement() {
 void setupTimers() {
     measurement_timer = timerBegin(0, 8000, true);
     timerAttachInterrupt(measurement_timer, &performPeriodicalMeasurement, true);
-    timerAlarmWrite(measurement_timer, MEASUREMENT_PERIOD * 10000, true);
+    timerAlarmWrite(measurement_timer, getPreferences()->measurement_period * 10000, true);
     timerAlarmEnable(measurement_timer);
 }
 
@@ -24,6 +24,7 @@ void setup() {
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
     btStop();
+    setupPreferences();
     setupDisplay();
     setupBmp280();
     setupMq7();
@@ -42,7 +43,7 @@ void setup() {
 }
 
 void loop() {
-    getServer()->handleClient();
+//    getServer()->handleClient();
     if (perform_periodical_measurement) {
         digitalWrite(LED_PIN, HIGH);
         measurement_t* measurement = loadSensorData();
@@ -51,7 +52,7 @@ void loop() {
             measurement->temperature, measurement->pressure, measurement->altitude, measurement->pollution);
         perform_periodical_measurement = false;
         periodical_measurements_since_last_time_sync += 1;
-        if (periodical_measurements_since_last_time_sync >= TIME_SYNC_PERIODICITY) {
+        if (periodical_measurements_since_last_time_sync >= getPreferences()->time_sync_periodicity) {
             periodical_measurements_since_last_time_sync = 0;
             wifiKeepAlive();
             configTime(0, 0, NTP_SERVER_1, NTP_SERVER_2, NTP_SERVER_3);
