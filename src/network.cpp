@@ -1,8 +1,8 @@
 #include "network.h"
 
 WiFiMulti wifiMulti;
-
 AsyncWebServer server(API_PORT);
+bool wifiApMode = false;
 
 void setupRouting() {
     server.on("/", [](AsyncWebServerRequest* request) {
@@ -54,12 +54,54 @@ void setupRouting() {
     server.begin();
 }
 
+void indicateSOS() {
+    delay(1000);
+    digitalWrite(LED_PIN, LOW);
+    for (uint8_t idx = 0; idx < 3; idx++) {
+        digitalWrite(LED_PIN, HIGH);
+        delay(200);
+        digitalWrite(LED_PIN, LOW);
+        delay(200);
+    }
+    delay(600);
+    for (uint8_t idx = 0; idx < 3; idx++) {
+        digitalWrite(LED_PIN, HIGH);
+        delay(600);
+        digitalWrite(LED_PIN, LOW);
+        delay(600);
+    }
+    delay(600);
+    for (uint8_t idx = 0; idx < 3; idx++) {
+        digitalWrite(LED_PIN, HIGH);
+        delay(200);
+        digitalWrite(LED_PIN, LOW);
+        delay(200);
+    }
+    delay(1000);
+}
+
 void wifiKeepAlive() {
+    if (wifiApMode) {
+        indicateSOS();
+        return;
+    }
     uint8_t ledState = LOW;
+    uint8_t retries = 0;
     while (wifiMulti.run(WIFI_CONNECTION_TIMEOUT * 1000) != WL_CONNECTED) {
         ledState = ledState == LOW ? HIGH : LOW;
         digitalWrite(LED_PIN, ledState);
-        delay(100);
+        delay(1000);
+        retries += 1;
+        if (retries > 30) {
+            break;
+        }
+    }
+    if (retries > 30) {
+        WiFi.mode(WIFI_MODE_AP);
+        WiFi.softAP("home_esp_country_house_room_1");
+        ESP_LOGI("home", "Couldn't connect to any available WiFi network. Fallback to access point mode with ssid 'home_esp_.*'. Please, connect to configure the device. After the configuration a reboot will be necessary.");
+        wifiApMode = true;
+        indicateSOS();
     }
     digitalWrite(LED_PIN, LOW);
 }
