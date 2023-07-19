@@ -40,10 +40,11 @@ void setup() {
     Serial.println("");
 
     digitalWrite(LED_PIN, LOW);
+
+    loadSensorData();
 }
 
 void loop() {
-//    getServer()->handleClient();
     if (perform_periodical_measurement) {
         digitalWrite(LED_PIN, HIGH);
         measurement_t* measurement = loadSensorData();

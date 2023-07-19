@@ -51,6 +51,20 @@ void setupRouting() {
         digitalWrite(LED_PIN, LOW);
     });
 
+    server.on("/settings", [](AsyncWebServerRequest* request) {
+        digitalWrite(LED_PIN, HIGH);
+        preferences_t* preferences = getPreferences();
+        char buffer[512] = {0};
+        snprintf(buffer, 512,
+            "{\"high_pollution_value\":%d,\"min_thermometer_temperature\":%d,\"max_thermometer_temperature\":%d,\"measurement_period\":%d,\"time_sync_periodicity\":%d,\"history_length\":%d,\"history_records_period\":%d,\"wifi_ssid\":\"%s\"}",
+            preferences->high_pollution_value, preferences->min_thermometer_temperature,
+            preferences->max_thermometer_temperature, preferences->measurement_period,
+            preferences->time_sync_periodicity, preferences->history_length,
+            preferences->history_records_period, preferences->wifi_ssid.c_str());
+        request->send(200, "application/json", buffer);
+        digitalWrite(LED_PIN, LOW);
+    });
+
     server.begin();
 }
 
@@ -92,11 +106,11 @@ void wifiKeepAlive() {
         digitalWrite(LED_PIN, ledState);
         delay(1000);
         retries += 1;
-        if (retries > 30) {
+        if (retries > WIFI_STA_CONNECT_RETRIES) {
             break;
         }
     }
-    if (retries > 30) {
+    if (retries > WIFI_STA_CONNECT_RETRIES) {
         WiFi.mode(WIFI_MODE_AP);
         WiFi.softAP("home_esp_country_house_room_1");
         ESP_LOGI("home", "Couldn't connect to any available WiFi network. Fallback to access point mode with ssid 'home_esp_.*'. Please, connect to configure the device. After the configuration a reboot will be necessary.");
@@ -106,7 +120,6 @@ void wifiKeepAlive() {
     digitalWrite(LED_PIN, LOW);
 }
 
-// TODO: Wifi ssid and password configuration via bluetooth and AP mode
 bool setupWifi() {
     WiFi.mode(WIFI_MODE_STA);
     wifi_credentials_t* credentials = loadWiFiCredentials();
@@ -138,8 +151,4 @@ bool setupRTC() {
     }
     digitalWrite(LED_PIN, HIGH);
     return result;
-}
-
-AsyncWebServer* getServer() {
-    return &server;
 }
