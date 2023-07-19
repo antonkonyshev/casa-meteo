@@ -52,6 +52,58 @@ void drawTime() {
     drawTime(&now);
 }
 
+void drawPressureIcon() {
+    tft.fillTriangle(PRESSURE_POSITION_X - 98, PRESSURE_POSITION_Y + 12, PRESSURE_POSITION_X - 95, PRESSURE_POSITION_Y + 16, PRESSURE_POSITION_X - 92, PRESSURE_POSITION_Y + 12, PRESSURE_COLOR);
+    tft.fillRect(PRESSURE_POSITION_X - 96, PRESSURE_POSITION_Y + 5, 3, 7, PRESSURE_COLOR);
+
+    tft.fillTriangle(PRESSURE_POSITION_X - 92, PRESSURE_POSITION_Y + 11, PRESSURE_POSITION_X - 89, PRESSURE_POSITION_Y + 15, PRESSURE_POSITION_X - 86, PRESSURE_POSITION_Y + 11, PRESSURE_COLOR);
+    tft.fillRect(PRESSURE_POSITION_X - 90, PRESSURE_POSITION_Y + 6, 3, 6, PRESSURE_COLOR);
+}
+
+void drawPressureUnits() {
+    tft.setTextColor(PRESSURE_COLOR, BACKGROUND_COLOR);
+    tft.drawRightString("MM", PRESSURE_POSITION_X, PRESSURE_POSITION_Y - 2, 1);
+    tft.drawRightString("PT", PRESSURE_POSITION_X, PRESSURE_POSITION_Y + 6, 1);
+    tft.drawRightString("CT", PRESSURE_POSITION_X, PRESSURE_POSITION_Y + 14, 1);
+    tft.setTextColor(FOREGROUND_COLOR, BACKGROUND_COLOR);
+}
+
+void cleanPressure(float value) {
+    if (value >= 1000 || value < -100) {
+        tft.fillRect(PRESSURE_POSITION_X - 101, PRESSURE_POSITION_Y, PRESSURE_WIDTH, PRESSURE_HEIGHT, BACKGROUND_COLOR);
+        pressureIconInitialized = false;
+    } else {
+        if (!pressureIconInitialized) {
+            tft.fillRect(PRESSURE_POSITION_X - 101, PRESSURE_POSITION_Y, PRESSURE_WIDTH, PRESSURE_HEIGHT, BACKGROUND_COLOR);
+            drawPressureIcon();
+            pressureIconInitialized = true;
+        } else {
+            tft.fillRect(PRESSURE_POSITION_X - 85, PRESSURE_POSITION_Y, PRESSURE_WIDTH - 16, PRESSURE_HEIGHT, BACKGROUND_COLOR);
+        }
+    }
+}
+
+void drawPressure(float value) {
+    cleanPressure(value);
+    tft.setTextColor(PRESSURE_COLOR, BACKGROUND_COLOR);
+    if (value > 0 && value < 10000) {
+        uint16_t integerPart = (uint16_t)value;
+        uint8_t decimalPart = (uint8_t)round((value - integerPart) * 100);
+        char buff[5] = {0};
+
+        snprintf(buff, 3, "%d0", decimalPart);
+        tft.drawRightString(buff, PRESSURE_POSITION_X - 14, PRESSURE_POSITION_Y + 6, 2);
+
+        snprintf(buff, 6, "%d.", integerPart);
+        tft.drawRightString(buff, PRESSURE_POSITION_X - 34, PRESSURE_POSITION_Y, 4);
+    } else {
+        char buff[8] = {0};
+        snprintf(buff, 8, "%.0f", value);
+        tft.drawRightString(buff, PRESSURE_POSITION_X - 14, PRESSURE_POSITION_Y, 4);
+    }
+    tft.setTextColor(FOREGROUND_COLOR, BACKGROUND_COLOR);
+}
+
 void cleanPollutionWarning() {
     tft.fillRect(WARNING_POSITION_X - 30, WARNING_POSITION_Y - 20, WARNING_WIDTH, WARNING_HEIGHT, BACKGROUND_COLOR);
 }
@@ -108,61 +160,11 @@ void drawPollution(float value) {
         if (pollutionWarningInitialized) {
             cleanPollutionWarning();
             pollutionWarningInitialized = false;
+            drawPressureIcon();
+            drawPressureUnits();
             drawTime();
         }
     }
-}
-
-void drawPressureIcon() {
-    tft.fillTriangle(PRESSURE_POSITION_X - 98, PRESSURE_POSITION_Y + 12, PRESSURE_POSITION_X - 95, PRESSURE_POSITION_Y + 16, PRESSURE_POSITION_X - 92, PRESSURE_POSITION_Y + 12, PRESSURE_COLOR);
-    tft.fillRect(PRESSURE_POSITION_X - 96, PRESSURE_POSITION_Y + 5, 3, 7, PRESSURE_COLOR);
-
-    tft.fillTriangle(PRESSURE_POSITION_X - 92, PRESSURE_POSITION_Y + 11, PRESSURE_POSITION_X - 89, PRESSURE_POSITION_Y + 15, PRESSURE_POSITION_X - 86, PRESSURE_POSITION_Y + 11, PRESSURE_COLOR);
-    tft.fillRect(PRESSURE_POSITION_X - 90, PRESSURE_POSITION_Y + 6, 3, 6, PRESSURE_COLOR);
-}
-
-void drawPressureUnits() {
-    tft.setTextColor(PRESSURE_COLOR, BACKGROUND_COLOR);
-    tft.drawRightString("MM", PRESSURE_POSITION_X, PRESSURE_POSITION_Y - 2, 1);
-    tft.drawRightString("PT", PRESSURE_POSITION_X, PRESSURE_POSITION_Y + 6, 1);
-    tft.drawRightString("CT", PRESSURE_POSITION_X, PRESSURE_POSITION_Y + 14, 1);
-    tft.setTextColor(FOREGROUND_COLOR, BACKGROUND_COLOR);
-}
-
-void cleanPressure(float value) {
-    if (value >= 1000 || value < -100) {
-        tft.fillRect(PRESSURE_POSITION_X - 101, PRESSURE_POSITION_Y, PRESSURE_WIDTH, PRESSURE_HEIGHT, BACKGROUND_COLOR);
-        pressureIconInitialized = false;
-    } else {
-        if (!pressureIconInitialized) {
-            tft.fillRect(PRESSURE_POSITION_X - 101, PRESSURE_POSITION_Y, PRESSURE_WIDTH, PRESSURE_HEIGHT, BACKGROUND_COLOR);
-            drawPressureIcon();
-            pressureIconInitialized = true;
-        } else {
-            tft.fillRect(PRESSURE_POSITION_X - 85, PRESSURE_POSITION_Y, PRESSURE_WIDTH - 16, PRESSURE_HEIGHT, BACKGROUND_COLOR);
-        }
-    }
-}
-
-void drawPressure(float value) {
-    cleanPressure(value);
-    tft.setTextColor(PRESSURE_COLOR, BACKGROUND_COLOR);
-    if (value > 0 && value < 10000) {
-        uint16_t integerPart = (uint16_t)value;
-        uint8_t decimalPart = (uint8_t)round((value - integerPart) * 100);
-        char buff[5] = {0};
-
-        snprintf(buff, 3, "%d0", decimalPart);
-        tft.drawRightString(buff, PRESSURE_POSITION_X - 14, PRESSURE_POSITION_Y + 6, 2);
-
-        snprintf(buff, 6, "%d.", integerPart);
-        tft.drawRightString(buff, PRESSURE_POSITION_X - 34, PRESSURE_POSITION_Y, 4);
-    } else {
-        char buff[8] = {0};
-        snprintf(buff, 8, "%.0f", value);
-        tft.drawRightString(buff, PRESSURE_POSITION_X - 14, PRESSURE_POSITION_Y, 4);
-    }
-    tft.setTextColor(FOREGROUND_COLOR, BACKGROUND_COLOR);
 }
 
 void initThermometer() {
