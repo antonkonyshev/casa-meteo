@@ -33,6 +33,7 @@ void setupRouting() {
         digitalWrite(LED_PIN, LOW);
     });
 
+    // TODO: Move device ID to preferences and make it editable
     server.on("/service", [](AsyncWebServerRequest* request) {
         digitalWrite(LED_PIN, HIGH);
         // The service endpoint response is a constant for the service, since it doesn't changes within time while the device is working
@@ -56,11 +57,11 @@ void setupRouting() {
         preferences_t* preferences = getPreferences();
         char buffer[512] = {0};
         snprintf(buffer, 512,
-            "{\"high_pollution_value\":%d,\"min_thermometer_temperature\":%d,\"max_thermometer_temperature\":%d,\"measurement_period\":%d,\"time_sync_periodicity\":%d,\"history_length\":%d,\"history_records_period\":%d,\"wifi_ssid\":\"%s\"}",
+            "{\"high_pollution_value\":%d,\"min_thermometer_temperature\":%d,\"max_thermometer_temperature\":%d,\"measurement_period\":%d,\"time_sync_period\":%d,\"history_length\":%d,\"history_record_period\":%d,\"wifi_ssid\":\"%s\"}",
             preferences->high_pollution_value, preferences->min_thermometer_temperature,
             preferences->max_thermometer_temperature, preferences->measurement_period,
-            preferences->time_sync_periodicity, preferences->history_length,
-            preferences->history_records_period, preferences->wifi_ssid.c_str());
+            preferences->time_sync_period, preferences->history_length,
+            preferences->history_record_period, preferences->wifi_ssid.c_str());
         request->send(200, "application/json", buffer);
         digitalWrite(LED_PIN, LOW);
     });

@@ -90,14 +90,14 @@ void saveSettings(preferences_t* prefs) {
     if (prefs->measurement_period) {
         nvs_set_u16(storage, NVS_MEASUREMENT_PERIOD_KEY, prefs->measurement_period);
     }
-    if (prefs->time_sync_periodicity) {
-        nvs_set_u8(storage, NVS_TIME_SYNC_PERIODICITY_KEY, prefs->time_sync_periodicity);
+    if (prefs->time_sync_period) {
+        nvs_set_u16(storage, NVS_TIME_SYNC_PERIOD_KEY, prefs->time_sync_period);
     }
     if (prefs->history_length) {
         nvs_set_u16(storage, NVS_HISTORY_LENGTH_KEY, prefs->history_length);
     }
-    if (prefs->history_records_period) {
-        nvs_set_u16(storage, NVS_HISTORY_RECORDS_PERIOD_KEY, prefs->history_records_period);
+    if (prefs->history_record_period) {
+        nvs_set_u16(storage, NVS_HISTORY_RECORD_PERIOD_KEY, prefs->history_record_period);
     }
     delete prefs;
     nvs_close(storage);
@@ -123,17 +123,17 @@ void setupPreferences() {
     if (!preferences->measurement_period) {
         preferences->measurement_period = NVS_MEASUREMENT_PERIOD_DEFAULT;
     }
-    nvs_get_u8(storage, NVS_TIME_SYNC_PERIODICITY_KEY, &(preferences->time_sync_periodicity));
-    if (!preferences->time_sync_periodicity) {
-        preferences->time_sync_periodicity = NVS_TIME_SYNC_PERIODICITY_DEFAULT;
+    nvs_get_u16(storage, NVS_TIME_SYNC_PERIOD_KEY, &(preferences->time_sync_period));
+    if (!preferences->time_sync_period) {
+        preferences->time_sync_period = NVS_TIME_SYNC_PERIOD_DEFAULT;
     }
     nvs_get_u16(storage, NVS_HISTORY_LENGTH_KEY, &(preferences->history_length));
     if (!preferences->history_length) {
         preferences->history_length = NVS_HISTORY_LENGTH_DEFAULT;
     }
-    nvs_get_u16(storage, NVS_HISTORY_RECORDS_PERIOD_KEY, &(preferences->history_records_period));
-    if (!preferences->history_records_period) {
-        preferences->history_records_period = NVS_HISTORY_RECORDS_PERIOD_DEFAULT;
+    nvs_get_u16(storage, NVS_HISTORY_RECORD_PERIOD_KEY, &(preferences->history_record_period));
+    if (!preferences->history_record_period) {
+        preferences->history_record_period = NVS_HISTORY_RECORD_PERIOD_DEFAULT;
     }
     nvs_close(storage);
 }

@@ -12,12 +12,12 @@
 #define NVS_MIN_THERMOMETER_TEMPERATURE_DEFAULT 14
 #define NVS_MEASUREMENT_PERIOD_KEY "measurement_period"
 #define NVS_MEASUREMENT_PERIOD_DEFAULT 15
-#define NVS_TIME_SYNC_PERIODICITY_KEY "time_sync_periodicity"
-#define NVS_TIME_SYNC_PERIODICITY_DEFAULT 120
+#define NVS_TIME_SYNC_PERIOD_KEY "time_sync_period"
+#define NVS_TIME_SYNC_PERIOD_DEFAULT 1800
 #define NVS_HISTORY_LENGTH_KEY "history_length"
 #define NVS_HISTORY_LENGTH_DEFAULT 50
-#define NVS_HISTORY_RECORDS_PERIOD_KEY "history_records_period"
-#define NVS_HISTORY_RECORDS_PERIOD_DEFAULT 1800
+#define NVS_HISTORY_RECORD_PERIOD_KEY "history_record_period"
+#define NVS_HISTORY_RECORD_PERIOD_DEFAULT 1800
 
 typedef struct wifi_credentials_s {
     std::string ssid;
@@ -32,16 +32,16 @@ typedef struct preferences_s {
     int8_t min_thermometer_temperature;
     int8_t max_thermometer_temperature;
     uint16_t measurement_period;
-    uint8_t time_sync_periodicity;
+    uint16_t time_sync_period;
     uint16_t history_length;
-    uint16_t history_records_period;
+    uint16_t history_record_period;
     std::string wifi_ssid;
     std::string wifi_password;
 
     preferences_s() : high_pollution_value(0),
         min_thermometer_temperature(0), max_thermometer_temperature(0),
-        measurement_period(0), time_sync_periodicity(0),
-        history_length(0), history_records_period(0),
+        measurement_period(0), time_sync_period(0),
+        history_length(0), history_record_period(0),
         wifi_ssid(""), wifi_password("") {}
 } preferences_t;
 

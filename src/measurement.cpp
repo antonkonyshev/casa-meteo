@@ -44,7 +44,7 @@ history_record_t* appendToHistory(std::string measurementSerialized) {
 
 history_record_t* periodicalAppendToHistory(time_t timestamp, std::string measurementSerialized) {
     preferences_t* preferences = getPreferences();
-    if (!history || history->length < preferences->history_length || timestamp >= lastRecordTimestamp + preferences->history_records_period) {
+    if (!history || history->length < preferences->history_length || timestamp >= lastRecordTimestamp + preferences->history_record_period) {
         return appendToHistory(measurementSerialized);
     }
     return NULL;
