@@ -43,12 +43,28 @@ void setupRouting() {
 
     server.on("/settings", HTTP_POST, [](AsyncWebServerRequest* request) {
         digitalWrite(LED_PIN, HIGH);
+        preferences_t* preferences = getPreferences();
         size_t params = request->params();
         for (int i = 0; i < params; i++) {
             AsyncWebParameter* param = request->getParam(i);
-            ESP_LOGE("home", "%s=%d", param->name().c_str(), param->value().toInt());
+            if (param->name() == "high_pollution_value") {
+                preferences->high_pollution_value = param->value().toInt();
+            } else if (param->name() == "min_thermometer_temperature") {
+                preferences->min_thermometer_temperature = param->value().toInt();
+            } else if (param->name() == "max_thermometer_temperature") {
+                preferences->max_thermometer_temperature = param->value().toInt();
+            } else if (param->name() == "measurement_period") {
+                preferences->measurement_period = param->value().toInt();
+            } else if (param->name() == "time_sync_period") {
+                preferences->time_sync_period = param->value().toInt();
+            } else if (param->name() == "history_length") {
+                preferences->history_length = param->value().toInt();
+            } else if (param->name() == "history_record_period") {
+                preferences->history_record_period = param->value().toInt();
+            }
         }
         request->send(200);
+        saveSettings(preferences);
         digitalWrite(LED_PIN, LOW);
     });
 

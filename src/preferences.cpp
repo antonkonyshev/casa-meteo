@@ -72,12 +72,12 @@ void cleanWiFiCredentials() {
 void saveSettings(preferences_t* prefs) {
     nvs_handle_t storage;
     nvs_open(NVS_PREFERENCES_STORAGE_NAME, NVS_READWRITE, &storage);
-    if (prefs->wifi_ssid.size() > 0) {
-        nvs_set_str(storage, NVS_WIFI_SSID_CREDENTIALS_KEY, prefs->wifi_ssid.c_str());
-    }
-    if (prefs->wifi_password.size() > 0) {
-        nvs_set_str(storage, NVS_WIFI_PASSWORD_CREDENTIALS_KEY, prefs->wifi_password.c_str());
-    }
+    // if (prefs->wifi_ssid.size() > 0) {
+    //     nvs_set_str(storage, NVS_WIFI_SSID_CREDENTIALS_KEY, prefs->wifi_ssid.c_str());
+    // }
+    // if (prefs->wifi_password.size() > 0) {
+    //     nvs_set_str(storage, NVS_WIFI_PASSWORD_CREDENTIALS_KEY, prefs->wifi_password.c_str());
+    // }
     if (prefs->high_pollution_value) {
         nvs_set_u16(storage, NVS_HIGH_POLLUTION_VALUE_KEY, prefs->high_pollution_value);
     }
