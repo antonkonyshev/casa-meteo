@@ -65,6 +65,11 @@ void setupRouting() {
         }
         request->send(200);
         saveSettings(preferences);
+        ESP_LOGI("preferences_save", "HP: %d MinT: %d MaxT: %d MP: %d TS: %d HL: %d HR: %d",
+            preferences->high_pollution_value, preferences->min_thermometer_temperature,
+            preferences->max_thermometer_temperature, preferences->measurement_period,
+            preferences->time_sync_period, preferences->history_length,
+            preferences->history_record_period);
         digitalWrite(LED_PIN, LOW);
     });
 
@@ -79,6 +84,11 @@ void setupRouting() {
             preferences->time_sync_period, preferences->history_length,
             preferences->history_record_period, preferences->wifi_ssid.c_str());
         request->send(200, "application/json", buffer);
+        ESP_LOGI("preferences_get", "HP: %d MinT: %d MaxT: %d MP: %d TS: %d HL: %d HR: %d",
+            preferences->high_pollution_value, preferences->min_thermometer_temperature,
+            preferences->max_thermometer_temperature, preferences->measurement_period,
+            preferences->time_sync_period, preferences->history_length,
+            preferences->history_record_period);
         digitalWrite(LED_PIN, LOW);
     });
 
