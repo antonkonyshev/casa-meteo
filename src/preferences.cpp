@@ -99,7 +99,6 @@ void saveSettings(preferences_t* prefs) {
     if (prefs->history_record_period) {
         nvs_set_u16(storage, NVS_HISTORY_RECORD_PERIOD_KEY, prefs->history_record_period);
     }
-    delete prefs;
     nvs_close(storage);
 }
 
