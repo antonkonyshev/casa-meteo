@@ -106,34 +106,20 @@ void setupPreferences() {
     preferences = new preferences_t;
     nvs_handle_t storage;
     nvs_open(NVS_PREFERENCES_STORAGE_NAME, NVS_READWRITE, &storage);
+    preferences->high_pollution_value = NVS_HIGH_POLLUTION_VALUE_DEFAULT;
     nvs_get_u16(storage, NVS_HIGH_POLLUTION_VALUE_KEY, &(preferences->high_pollution_value));
-    if (!preferences->high_pollution_value) {
-        preferences->high_pollution_value = NVS_HIGH_POLLUTION_VALUE_DEFAULT;
-    }
+    preferences->min_thermometer_temperature = NVS_MIN_THERMOMETER_TEMPERATURE_DEFAULT;
     nvs_get_i8(storage, NVS_MIN_THERMOMETER_TEMPERATURE_KEY, &(preferences->min_thermometer_temperature));
-    if (!preferences->min_thermometer_temperature) {
-        preferences->min_thermometer_temperature = NVS_MIN_THERMOMETER_TEMPERATURE_DEFAULT;
-    }
+    preferences->max_thermometer_temperature = NVS_MAX_THERMOMETER_TEMPERATURE_DEFAULT;
     nvs_get_i8(storage, NVS_MAX_THERMOMETER_TEMPERATURE_KEY, &(preferences->max_thermometer_temperature));
-    if (!preferences->max_thermometer_temperature) {
-        preferences->max_thermometer_temperature = NVS_MAX_THERMOMETER_TEMPERATURE_DEFAULT;
-    }
+    preferences->measurement_period = NVS_MEASUREMENT_PERIOD_DEFAULT;
     nvs_get_u16(storage, NVS_MEASUREMENT_PERIOD_KEY, &(preferences->measurement_period));
-    if (!preferences->measurement_period) {
-        preferences->measurement_period = NVS_MEASUREMENT_PERIOD_DEFAULT;
-    }
+    preferences->time_sync_period = NVS_TIME_SYNC_PERIOD_DEFAULT;
     nvs_get_u16(storage, NVS_TIME_SYNC_PERIOD_KEY, &(preferences->time_sync_period));
-    if (!preferences->time_sync_period) {
-        preferences->time_sync_period = NVS_TIME_SYNC_PERIOD_DEFAULT;
-    }
+    preferences->history_length = NVS_HISTORY_LENGTH_DEFAULT;
     nvs_get_u16(storage, NVS_HISTORY_LENGTH_KEY, &(preferences->history_length));
-    if (!preferences->history_length) {
-        preferences->history_length = NVS_HISTORY_LENGTH_DEFAULT;
-    }
+    preferences->history_record_period = NVS_HISTORY_RECORD_PERIOD_DEFAULT;
     nvs_get_u16(storage, NVS_HISTORY_RECORD_PERIOD_KEY, &(preferences->history_record_period));
-    if (!preferences->history_record_period) {
-        preferences->history_record_period = NVS_HISTORY_RECORD_PERIOD_DEFAULT;
-    }
     nvs_close(storage);
 }
 

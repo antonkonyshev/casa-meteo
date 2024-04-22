@@ -38,10 +38,13 @@ typedef struct preferences_s {
     std::string wifi_ssid;
     std::string wifi_password;
 
-    preferences_s() : high_pollution_value(0),
-        min_thermometer_temperature(0), max_thermometer_temperature(0),
-        measurement_period(0), time_sync_period(0),
-        history_length(0), history_record_period(0),
+    preferences_s() : high_pollution_value(NVS_HIGH_POLLUTION_VALUE_DEFAULT),
+        min_thermometer_temperature(NVS_MIN_THERMOMETER_TEMPERATURE_DEFAULT),
+        max_thermometer_temperature(NVS_MAX_THERMOMETER_TEMPERATURE_DEFAULT),
+        measurement_period(NVS_MEASUREMENT_PERIOD_DEFAULT),
+        time_sync_period(NVS_TIME_SYNC_PERIOD_DEFAULT),
+        history_length(NVS_HISTORY_LENGTH_DEFAULT),
+        history_record_period(NVS_HISTORY_RECORD_PERIOD_DEFAULT),
         wifi_ssid(""), wifi_password("") {}
 } preferences_t;
 
