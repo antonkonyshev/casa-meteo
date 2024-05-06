@@ -11,7 +11,7 @@ void saveSettings(preferences_t* prefs) {
     savePreference(NVS_MAX_THERMOMETER_TEMPERATURE_KEY, prefs->max_thermometer_temperature);
     savePreference(NVS_MEASUREMENT_PERIOD_KEY, prefs->measurement_period);
     savePreference(NVS_TIME_SYNC_PERIOD_KEY, prefs->time_sync_period);
-    savePreference(NVS_HISTORY_LENGTH_KEY, prefs->history_length);
+    savePreference(NVS_JOURNAL_LENGTH_KEY, prefs->journal_length);
     savePreference(NVS_HISTORY_RECORD_PERIOD_KEY, prefs->history_record_period);
 
     closePreferencesStorage();
@@ -35,7 +35,7 @@ void setupPreferences() {
     loadPreference(NVS_MAX_THERMOMETER_TEMPERATURE_KEY, &preferences->max_thermometer_temperature, NVS_MAX_THERMOMETER_TEMPERATURE_DEFAULT);
     loadPreference(NVS_MEASUREMENT_PERIOD_KEY, &preferences->measurement_period, (uint16_t) NVS_MEASUREMENT_PERIOD_DEFAULT);
     loadPreference(NVS_TIME_SYNC_PERIOD_KEY, &preferences->time_sync_period, (uint16_t) NVS_TIME_SYNC_PERIOD_DEFAULT);
-    loadPreference(NVS_HISTORY_LENGTH_KEY, &preferences->history_length, (uint16_t) NVS_HISTORY_LENGTH_DEFAULT);
+    loadPreference(NVS_JOURNAL_LENGTH_KEY, &preferences->journal_length, (uint16_t) NVS_JOURNAL_LENGTH_DEFAULT);
     loadPreference(NVS_HISTORY_RECORD_PERIOD_KEY, &preferences->history_record_period, (uint16_t) NVS_HISTORY_RECORD_PERIOD_DEFAULT);
     
     closePreferencesStorage();

@@ -2,6 +2,7 @@
 
 Adafruit_BMP280 bmp280;
 char lastMeasurementSerialized[SERIALIZED_MEASUREMENT_MAX_LENGTH] = {0};
+time_t lastRecordTimestamp;
 
 char* getLastMeasurementSerialized() {
     return lastMeasurementSerialized;
@@ -36,6 +37,15 @@ bool setupMq7() {
     return true;
 }
 
+record_t* periodicalAppendToHistory(time_t timestamp, const char* measurementSerialized) {
+    preferences_t* preferences = getPreferences();
+    journal_t* journal = getJournal();
+    if (journal->length < preferences->journal_length || timestamp >= lastRecordTimestamp + preferences->history_record_period) {
+        return appendJournalRecord(measurementSerialized, timestamp, 1, preferences->journal_length);
+    }
+    return nullptr;
+}
+
 measurement_t* loadSensorData() {
     time_t now;
     measurement_t* measurement = new measurement_t;
@@ -56,9 +66,6 @@ measurement_t* loadSensorData() {
     measurement->pollution = readPollution();
     drawPollution(measurement->pollution);
 
-    // This allows us to rid of excess dependency (json serialization) and 
-    // reduce client waiting time, when the client comes to get measurements
-    // everything we need is to send him already prepared char array
     snprintf(lastMeasurementSerialized, SERIALIZED_MEASUREMENT_MAX_LENGTH,
         "{\"timestamp\":%d,\"temperature\":%.2f,\"pressure\":%.2f,\"altitude\":%.2f,\"pollution\":%.2f}",
         measurement->timestamp, measurement->temperature, measurement->pressure, measurement->altitude,

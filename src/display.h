@@ -1,7 +1,9 @@
+#pragma once 
+
 #include <TFT_eSPI.h>
 #include <SPI.h>
 
-#include "measurement.h"
+#include "preferences.h"
 
 #define COLOR_BLUE TFT_RED
 #define COLOR_RED TFT_BLUE

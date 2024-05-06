@@ -9,21 +9,21 @@ void setupRouting() {
         digitalWrite(LED_PIN, LOW);
     });
 
-    server.on("/history", [](AsyncWebServerRequest* request) {
+    server.on("/journal", [](AsyncWebServerRequest* request) {
         digitalWrite(LED_PIN, HIGH);
-        history_t* history = getHistory();
-        if (!history->first) {
+        journal_t* journal = getJournal();
+        if (!journal->first) {
             request->send(200, "application/json", "[]");
             return;
         }
-        history_record_t* record = history->first;
+        record_t* record = journal->first;
         AsyncResponseStream* response = request->beginResponseStream("application/json");
         response->print("[");
         while (record) {
-            if (record != history->first) {
+            if (record != journal->first) {
                 response->print(",");
             }
-            response->print(record->measurement);
+            response->print(record->message);
             record = record->next;
         }
         response->print("]");
@@ -54,8 +54,8 @@ void setupRouting() {
                 preferences->measurement_period = param->value().toInt();
             } else if (param->name() == "time_sync_period") {
                 preferences->time_sync_period = param->value().toInt();
-            } else if (param->name() == "history_length") {
-                preferences->history_length = param->value().toInt();
+            } else if (param->name() == "journal_length") {
+                preferences->journal_length = param->value().toInt();
             } else if (param->name() == "history_record_period") {
                 preferences->history_record_period = param->value().toInt();
             }
@@ -70,10 +70,10 @@ void setupRouting() {
         preferences_t* preferences = getPreferences();
         char buffer[512] = {0};
         snprintf(buffer, 512,
-            "{\"high_pollution_value\":%d,\"min_thermometer_temperature\":%d,\"max_thermometer_temperature\":%d,\"measurement_period\":%d,\"time_sync_period\":%d,\"history_length\":%d,\"history_record_period\":%d,\"wifi_ssid\":\"%s\"}",
+            "{\"high_pollution_value\":%d,\"min_thermometer_temperature\":%d,\"max_thermometer_temperature\":%d,\"measurement_period\":%d,\"time_sync_period\":%d,\"journal_length\":%d,\"history_record_period\":%d,\"wifi_ssid\":\"%s\"}",
             preferences->high_pollution_value, preferences->min_thermometer_temperature,
             preferences->max_thermometer_temperature, preferences->measurement_period,
-            preferences->time_sync_period, preferences->history_length,
+            preferences->time_sync_period, preferences->journal_length,
             preferences->history_record_period, preferences->wifi_ssid);
         request->send(200, "application/json", buffer);
         digitalWrite(LED_PIN, LOW);
