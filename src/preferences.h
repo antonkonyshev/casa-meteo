@@ -1,9 +1,7 @@
-#include <string>
-#include <nvs_flash.h>
+#pragma once
 
-#define NVS_PREFERENCES_STORAGE_NAME "storage"
-#define NVS_WIFI_SSID_CREDENTIALS_KEY "wifi_ssid"
-#define NVS_WIFI_PASSWORD_CREDENTIALS_KEY "wifi_password"
+#include "CasaLib/preferences.h"
+
 #define NVS_HIGH_POLLUTION_VALUE_KEY "high_pollution"
 #define NVS_HIGH_POLLUTION_VALUE_DEFAULT 20
 #define NVS_MAX_THERMOMETER_TEMPERATURE_KEY "max_temperature"
@@ -19,14 +17,6 @@
 #define NVS_HISTORY_RECORD_PERIOD_KEY "history_record_period"
 #define NVS_HISTORY_RECORD_PERIOD_DEFAULT 1800
 
-typedef struct wifi_credentials_s {
-    std::string ssid;
-    std::string password;
-    wifi_credentials_s* next;
-
-    wifi_credentials_s() : next(nullptr) {}
-} wifi_credentials_t;
-
 typedef struct preferences_s {
     uint16_t high_pollution_value;
     int8_t min_thermometer_temperature;
@@ -35,8 +25,8 @@ typedef struct preferences_s {
     uint16_t time_sync_period;
     uint16_t history_length;
     uint16_t history_record_period;
-    std::string wifi_ssid;
-    std::string wifi_password;
+    const char* wifi_ssid;
+    const char* wifi_password;
 
     preferences_s() : high_pollution_value(NVS_HIGH_POLLUTION_VALUE_DEFAULT),
         min_thermometer_temperature(NVS_MIN_THERMOMETER_TEMPERATURE_DEFAULT),
@@ -45,12 +35,9 @@ typedef struct preferences_s {
         time_sync_period(NVS_TIME_SYNC_PERIOD_DEFAULT),
         history_length(NVS_HISTORY_LENGTH_DEFAULT),
         history_record_period(NVS_HISTORY_RECORD_PERIOD_DEFAULT),
-        wifi_ssid(""), wifi_password("") {}
+        wifi_ssid(nullptr), wifi_password(nullptr) {}
 } preferences_t;
 
-wifi_credentials_t* loadWiFiCredentials();
-void saveWiFiCredentials(const char* ssid, const char* password);
-void cleanWiFiCredentials();
 void saveSettings(preferences_t* prefs);
 void setupPreferences();
 preferences_t* getPreferences();

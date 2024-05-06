@@ -1,43 +1,31 @@
 #include "main.h"
 
-hw_timer_t* measurement_timer = NULL;
-bool perform_periodical_measurement = false;
+time_t measurement_period = 15000;  // Default measurement period (ms)
+time_t last_measurement_performed = 0;
 time_t last_time_sync_timestamp = 0;
 
-void performPeriodicalMeasurement() {
-    perform_periodical_measurement = true;
-}
-
-void setupTimers() {
-    measurement_timer = timerBegin(0, 8000, true);
-    timerAttachInterrupt(measurement_timer, &performPeriodicalMeasurement, true);
-    timerAlarmWrite(measurement_timer, getPreferences()->measurement_period * 10000, true);
-    timerAlarmEnable(measurement_timer);
-}
-
 void setup() {
-    Serial.begin(9600);
-    delay(100);
-    Serial.println("");
-    Serial.println("--------------------------------- Meteo ---------------------------------");
-
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
+
+    printHardwareInfo();
+
+    #ifdef ESP32_DEVICE
     btStop();
+    #endif
+
     setupPreferences();
+    preferences_t* preferences = getPreferences();
+    measurement_period = preferences->measurement_period * 1000;
+
     setupDisplay();
     setupBmp280();
     setupMq7();
     setupWifi();
     setupRTC();
     setupRouting();
-    setupTimers();
 
-    Serial.println("");
-    Serial.printf("Total  heap: %8d bytes     |     Free  heap: %8d bytes\n", ESP.getHeapSize(), ESP.getFreeHeap());
-    Serial.printf("Total PSRAM: %8d bytes     |     Free PSRAM: %8d bytes\n", ESP.getPsramSize(), ESP.getFreePsram());
-    Serial.printf("Sketch size: %8d bytes     |     Free space: %8d bytes\n", ESP.getSketchSize(), ESP.getFreeSketchSpace());
-    Serial.println("");
+    printMemoryInfo();
 
     digitalWrite(LED_PIN, LOW);
 
@@ -45,17 +33,26 @@ void setup() {
 }
 
 void loop() {
-    if (perform_periodical_measurement) {
+    if (millis() - measurement_period > last_measurement_performed) {
         digitalWrite(LED_PIN, HIGH);
+        last_measurement_performed = millis();
         measurement_t* measurement = loadSensorData();
+
+        #ifdef ESP32_DEVICE
         ESP_LOGI("main",
             "Temperature: %.2f °C   |   Pressure: %.2f mmHg   |   Altitude: %.2f m   |   Pollution: %.2f mg/m3",
             measurement->temperature, measurement->pressure, measurement->altitude, measurement->pollution);
-        perform_periodical_measurement = false;
+        #endif
+        #ifdef ESP8266_DEVICE
+        Serial.printf(
+            "Temperature: %.2f °C   |   Pressure: %.2f mmHg   |   Altitude: %.2f m   |   Pollution: %.2f mg/m3\n",
+            measurement->temperature, measurement->pressure, measurement->altitude, measurement->pollution);
+        #endif
+
         if (measurement->timestamp > last_time_sync_timestamp + getPreferences()->time_sync_period) {
             last_time_sync_timestamp = measurement->timestamp;
             wifiKeepAlive();
-            configTime(0, 0, NTP_SERVER_1, NTP_SERVER_2, NTP_SERVER_3);
+            syncTime();
         }
         digitalWrite(LED_PIN, LOW);
     }

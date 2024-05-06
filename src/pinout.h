@@ -1,3 +1,8 @@
+#pragma once 
+
+#define DEVICE_ID "meteo-1"
+#define DEVICE_NAME "Meteo"
+
 #define LED_PIN 2
 
 #define BMP280_SDA 21

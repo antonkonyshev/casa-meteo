@@ -1,4 +1,4 @@
-#include <cstdlib>
+#pragma once
 
 #include "preferences.h"
 
@@ -11,7 +11,7 @@ typedef struct measurement_s {
 } measurement_t;
 
 typedef struct history_record_s {
-    std::string measurement;
+    const char* measurement;
     history_record_s* next;
     history_record_s* prev;
 
@@ -26,7 +26,7 @@ typedef struct history_s {
     history_s() : first(nullptr), last(nullptr), length(0) {}
 } history_t;
 
-history_record_t* appendToHistory(std::string measurementSerialized);
-history_record_t* periodicalAppendToHistory(time_t timestamp, std::string measurementSerialized);
+history_record_t* appendToHistory(const char* measurementSerialized);
+history_record_t* periodicalAppendToHistory(time_t timestamp, const char* measurementSerialized);
 history_t* getHistory();
 history_t* setupHistory();

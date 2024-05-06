@@ -64,7 +64,7 @@ measurement_t* loadSensorData() {
         measurement->timestamp, measurement->temperature, measurement->pressure, measurement->altitude,
         measurement->pollution);
 
-    periodicalAppendToHistory(now, std::string(lastMeasurementSerialized));
+    periodicalAppendToHistory(now, lastMeasurementSerialized);
 
     return measurement;
 }
