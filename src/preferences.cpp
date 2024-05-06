@@ -13,6 +13,10 @@ void saveSettings(preferences_t* prefs) {
     savePreference(NVS_TIME_SYNC_PERIOD_KEY, prefs->time_sync_period);
     savePreference(NVS_JOURNAL_LENGTH_KEY, prefs->journal_length);
     savePreference(NVS_HISTORY_RECORD_PERIOD_KEY, prefs->history_record_period);
+    if (prefs->wifi_ssid) {
+        savePreference(NVS_WIFI_SSID_CREDENTIALS_KEY, prefs->wifi_ssid);
+        savePreference(NVS_WIFI_PASSWORD_CREDENTIALS_KEY, prefs->wifi_password);
+    }
 
     closePreferencesStorage();
     #endif
