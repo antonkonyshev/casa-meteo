@@ -2,22 +2,24 @@
 
 Adafruit_BMP280 bmp280;
 char lastMeasurementSerialized[SERIALIZED_MEASUREMENT_MAX_LENGTH] = {0};
-time_t lastRecordTimestamp;
 
 char* getLastMeasurementSerialized() {
     return lastMeasurementSerialized;
 }
 
 float readTemperature() {
-    return round(bmp280.readTemperature() * 100) / 100;
+    float value = bmp280.readTemperature();
+    return isnan(value) ? -273 : round(value * 100) / 100;
 }
 
 float readAltitude() {
-    return round(bmp280.readAltitude() * 100) / 100;
+    float value = bmp280.readAltitude();
+    return isnan(value) ? 0 : round(value * 100) / 100;
 }
 
 float readPressure() {
-    return round(bmp280.readPressure() * MMHG_IN_PA * 100) / 100;
+    float value = bmp280.readPressure();
+    return isnan(value) ? 0 : round(value * MMHG_IN_PA * 100) / 100;
 }
 
 float convertPollutionToMgM3(int value) {
@@ -40,8 +42,8 @@ bool setupMq7() {
 record_t* periodicalAppendToHistory(time_t timestamp, const char* measurementSerialized) {
     preferences_t* preferences = getPreferences();
     journal_t* journal = getJournal();
-    if (journal->length < preferences->journal_length || timestamp >= lastRecordTimestamp + preferences->history_record_period) {
-        return appendJournalRecord(measurementSerialized, timestamp, 1, preferences->journal_length);
+    if (journal->length < preferences->journal_length || timestamp >= journal->last->timestamp + preferences->history_record_period) {
+        return appendJournalRecord(strdup(measurementSerialized), timestamp, 1, preferences->journal_length);
     }
     return nullptr;
 }

@@ -16,6 +16,9 @@ typedef struct measurement_s {
     float pressure;    // mmHg
     float altitude;    // meters above sea level
     float pollution;    // mg/m3
+
+    measurement_s(): timestamp(0), temperature(-273), pressure(0),
+        altitude(0), pollution(0) {};
 } measurement_t;
 
 float readTemperature();

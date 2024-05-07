@@ -8,6 +8,7 @@ void setup() {
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, HIGH);
 
+    setupSerial();
     printHardwareInfo();
 
     #ifdef ESP32_DEVICE

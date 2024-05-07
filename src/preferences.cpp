@@ -73,17 +73,19 @@ void setupPreferences() {
     closePreferencesStorage();
     #endif
     #ifdef ESP8266_DEVICE
-    loadPreference(preferences);
+    if (!loadPreference(preferences)) {
+        preferences->journal_length = NVS_JOURNAL_LENGTH_DEFAULT;
+    }
     #endif
 }
 
 void serializeSettings(char* buffer) {
-    sprintf(buffer, 
-        "{\"high_pollution_value\":%d,\"min_thermometer_temperature\":%d,\"max_thermometer_temperature\":%d,\"measurement_period\":%d,\"time_sync_period\":%d,\"journal_length\":%d,\"history_record_period\":%d,\"wifi_ssid\":\"%s\"}",
+    sprintf(buffer,
+        "{\"high_pollution_value\":%d,\"min_thermometer_temperature\":%d,\"max_thermometer_temperature\":%d,\"measurement_period\":%d,\"time_sync_period\":%d,\"journal_length\":%d,\"history_record_period\":%d}",
         preferences->high_pollution_value, preferences->min_thermometer_temperature,
         preferences->max_thermometer_temperature, preferences->measurement_period,
         preferences->time_sync_period, preferences->journal_length,
-        preferences->history_record_period, preferences->wifi_ssid);
+        preferences->history_record_period);
 }
 
 preferences_t* getPreferences() {
